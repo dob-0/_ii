@@ -10,7 +10,7 @@ A live VJ (video jockey) terminal visual engine built in Python for a techno mus
 
 Two terminals run simultaneously:
 - **Fullscreen terminal** → `python3 visuals.py` (the visuals, fullscreen Kitty)
-- **Control terminal** → `python3 controller.py` (live parameter control, curses TUI)
+- **Control terminal** → `python3 ii.py` (live parameter control, curses TUI)
 
 The user describes changes in natural language and the AI edits `visuals.py`. A hot-reload system detects file saves and restarts the engine automatically in ~1 second — the performance never stops.
 
@@ -21,7 +21,7 @@ The user describes changes in natural language and the AI edits `visuals.py`. A 
 ```
 mct7/
 ├── visuals.py      — MAIN FILE. Visual engine. 17 modes. Edit this for visual changes.
-├── controller.py   — Curses TUI controller. Edit for new controls/UI.
+├── ii.py   — Curses TUI controller. Edit for new controls/UI.
 ├── config.json     — Startup defaults (symbols, frame_delay, etc.)
 ├── control.json    — Live IPC: controller writes this, visuals reads it every frame
 ├── status.json     — Live IPC: visuals writes this (fps, frame, mode), controller reads it
@@ -225,7 +225,7 @@ def _mymode(self):
 self.mode_fns.append(self._mymode)
 self.mode_labels.append('MYMODE')
 
-# 3. In controller.py, add to MODES list:
+# 3. In ii.py, add to MODES list:
 MODES = [..., 'MYMODE']
 ```
 
@@ -234,10 +234,10 @@ MODES = [..., 'MYMODE']
 ## How to Add a New Parameter
 
 ```python
-# 1. Add to DEFAULTS in controller.py and use in a mode:
+# 1. Add to DEFAULTS in ii.py and use in a mode:
 self.cfg.get('my_param', 0.5)   # in visuals.py
 
-# 2. Add to PARAMS list in controller.py:
+# 2. Add to PARAMS list in ii.py:
 ('my_param', 'MY PARAM    ', 0.0, 1.0, 0.05, '{:.2f}')
 # (key, display_label, min, max, step, format_string)
 

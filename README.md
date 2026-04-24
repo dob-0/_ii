@@ -14,7 +14,7 @@ python3 visuals.py
 
 **Terminal 2 — controller:**
 ```bash
-python3 controller.py
+python3 ii.py
 ```
 
 **Requirements:** Python 3.6+, Kitty terminal (GPU-accelerated), black background, monospace bold font 16pt+.
@@ -100,7 +100,7 @@ All parameters are live — change takes effect on the next frame.
 ```
 mct7/
 ├── visuals.py      — main visual engine (run fullscreen)
-├── controller.py   — live controller TUI (run in second terminal)
+├── ii.py           — live controller TUI (run in second terminal)
 ├── config.json     — startup defaults for visual parameters
 ├── control.json    — live IPC: controller → visuals (auto-generated)
 ├── status.json     — live IPC: visuals → controller (auto-generated)

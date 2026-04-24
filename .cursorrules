@@ -5,7 +5,7 @@ The user edits visuals.py in real time during performances. Changes hot-reload i
 
 ## Project layout
 - visuals.py     — MAIN FILE. Engine class, 17 visual modes. Edit for visual changes.
-- controller.py  — Curses TUI. Edit for controller UI/key changes.
+- ii.py  — Curses TUI. Edit for controller UI/key changes.
 - config.json    — Startup defaults.
 - control.json   — Live IPC (controller → visuals, auto-generated).
 - status.json    — Live IPC (visuals → controller, auto-generated).
@@ -29,7 +29,7 @@ The user edits visuals.py in real time during performances. Changes hot-reload i
 ## Adding a new mode
 1. Add def _mymode(self) to Engine
 2. Append to self.mode_fns and self.mode_labels in __init__
-3. Append name to MODES in controller.py
+3. Append name to MODES in ii.py
 
 ## Aesthetic
 Industrial/techno. Bold ANSI colors. Math-driven animation (sin/cos). BPM-aware where possible.

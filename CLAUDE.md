@@ -8,7 +8,7 @@ This is a live VJ terminal visual engine for a techno event (MOCT 7th Anniversar
 
 Two-terminal VJ system:
 - `visuals.py` — fullscreen ASCII visual engine in Kitty terminal
-- `controller.py` — curses-based live controller in a second terminal
+- `ii.py` — curses-based live controller in a second terminal
 - IPC via `control.json` (controller→visuals) and `status.json` (visuals→controller)
 
 The user describes changes in natural language. You edit `visuals.py`. The hot-reload system (`os.execv` on file mtime change, checked every 20 frames) restarts the engine automatically within ~1 second — no manual restart needed.
@@ -48,7 +48,7 @@ PALETTES = [  # 6 palettes
 
 **Color dict `C`:** keys are `'red','green','white','dim','cyan','yellow','magenta','red_d','green_d','blue'`
 
-### controller.py
+### ii.py
 
 Curses TUI. Single class `Controller`. Writes `control.json` every loop iteration. Reads `status.json` for live feedback display.
 
@@ -139,7 +139,7 @@ if os.path.getmtime(__file__) != self._mtime:
 1. Add a method `_mymode(self)` to `Engine`
 2. Append it to `self.mode_fns` in `__init__`
 3. Append its name string to `self.mode_labels` in `__init__`
-4. Add to `MODES` list in `controller.py`
+4. Add to `MODES` list in `ii.py`
 5. Save → hot-reload activates it
 
 Accessing palette: `p = self.pal` then `C[p['p']]`, `C[p['s']]`, `C[p['a']]`  
