@@ -1,0 +1,8 @@
+control.json
+control.json.tmp
+status.json
+status.json.tmp
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

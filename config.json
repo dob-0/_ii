@@ -1,0 +1,9 @@
+{
+  "symbols": ["█", "▓", "▒", "░", "▚", "◈", "7", "M", "O", "C", "T"],
+  "frame_delay": 0.05,
+  "mode_cycle_frames": 250,
+  "wave_amplitude": 0.35,
+  "glitch_intensity": 0.4,
+  "strobe_speed": 2,
+  "rain_density": 0.7
+}

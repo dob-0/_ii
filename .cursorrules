@@ -1,0 +1,40 @@
+# MOCT 7 | Cursor AI Rules
+
+This is a live VJ terminal visual engine for a techno event (MOCT 7, Hayfilm Studio, Yerevan 2026).
+The user edits visuals.py in real time during performances. Changes hot-reload in ~1 second via os.execv.
+
+## Project layout
+- visuals.py     — MAIN FILE. Engine class, 17 visual modes. Edit for visual changes.
+- controller.py  — Curses TUI. Edit for controller UI/key changes.
+- config.json    — Startup defaults.
+- control.json   — Live IPC (controller → visuals, auto-generated).
+- status.json    — Live IPC (visuals → controller, auto-generated).
+- AI_CONTEXT.md  — Full architecture reference.
+
+## Code rules
+
+- Output: always build list[str] and emit one sys.stdout.write(''.join(out)) per frame for full-grid modes.
+  Never write per-cell in a hot loop.
+- Colors: use C['red'], C['green'] etc. Always append RESET after colored text.
+- Palette: always use self.pal['p'], self.pal['s'], self.pal['a'] — never hardcode colors.
+- Drawable area: H = self.h - 1. Bottom row (self.h - 1) is status bar — never draw there.
+- Clip text: always text[:self.w - x] before writing.
+- Sparse modes (CUBE, SCANNER, STORM, PARTICLES, SHOCKWAVE): use self._put(x, y, ch, col).
+- Full-grid modes (TUNNEL, PLASMA, VORTEX, NOISE, WAVE, PULSE): use list-join output.
+- No print(), no os.system('clear'), no curses in visuals.py.
+- No external dependencies beyond Python stdlib.
+- Keep particles capped: self.particles = alive[-700:]
+- Keep rings capped: self.rings = alive[-14:]
+
+## Adding a new mode
+1. Add def _mymode(self) to Engine
+2. Append to self.mode_fns and self.mode_labels in __init__
+3. Append name to MODES in controller.py
+
+## Aesthetic
+Industrial/techno. Bold ANSI colors. Math-driven animation (sin/cos). BPM-aware where possible.
+Characters from self.syms: ['█','▓','▒','░','▚','◈','7','M','O','C','T'].
+
+## Hot reload
+The engine watches its own mtime every 20 frames and calls os.execv to restart in-place.
+Save visuals.py → user sees the change in ~1 second. No manual restart needed.
