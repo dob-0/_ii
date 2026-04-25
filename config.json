@@ -1,9 +1,26 @@
 {
   "symbols": ["█", "▓", "▒", "░", "▚", "◈", "7", "M", "O", "C", "T"],
+  "symbol_sets": [
+    ["█","▓","▒","░","▚","◈","7","M","O","C","T"],
+    ["@","#","%","!","*","+","=","-","~","."],
+    ["0","1","│","─","╎","╷","╔","╗","╚","╝"],
+    ["┌","┐","└","┘","├","┤","┬","┴","┼","│","─"],
+    ["◈","◆","◇","▲","▼","◉","●","○","◎","▸"],
+    ["∑","∏","∫","∂","∇","∞","≈","≠","±","×"]
+  ],
+  "symbol_set_names": ["BLOCK","ASCII","DIGIT","GRID","SHAPES","MATH"],
   "frame_delay": 0.05,
   "mode_cycle_frames": 250,
   "wave_amplitude": 0.35,
   "glitch_intensity": 0.4,
   "strobe_speed": 2,
-  "rain_density": 0.7
+  "rain_density": 0.7,
+  "autostart_visuals": true,
+  "visuals_launch_cmd": [],
+  "visuals_terminal": "auto",
+  "visuals_fullscreen": true,
+  "visuals_window_title": "MOCT7-VISUALS",
+  "visuals_force_x11": false,
+  "visuals_monitor": "HDMI-A-1",
+  "visuals_geometry": ""
 }

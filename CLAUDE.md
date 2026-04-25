@@ -7,11 +7,13 @@ This is a live VJ terminal visual engine for a techno event (MOCT 7th Anniversar
 ## Project Purpose
 
 Two-terminal VJ system:
-- `visuals.py` — fullscreen ASCII visual engine in Kitty terminal
-- `ii.py` — curses-based live controller in a second terminal
+- `visuals.py` — fullscreen ASCII compositor/runtime in Kitty terminal
+- `modes/*.py` — individual visual modes, discovered dynamically by `architecture.py`
+- `ii.py` — live performance deck/controller in a second terminal
+- `nodes.py` — live patch graph for BPM, mic, cameras, visuals, and optional Art-Net outputs
 - IPC via `control.json` (controller→visuals) and `status.json` (visuals→controller)
 
-The user describes changes in natural language. You edit `visuals.py`. The hot-reload system (`os.execv` on file mtime change, checked every 20 frames) restarts the engine automatically within ~1 second — no manual restart needed.
+The user describes changes in natural language. Edit `modes/*.py` for visuals, `nodes.py` for live patching, `ii.py` for controller UI, and `node_lib.py` for new node types. The hot-reload system restarts visuals when `visuals.py` or a mode file changes; `ii.py` hot-reloads `nodes.py`.
 
 ---
 
@@ -19,14 +21,13 @@ The user describes changes in natural language. You edit `visuals.py`. The hot-r
 
 ### visuals.py
 
-Single class `Engine` with 17 visual modes. Key design:
+Single class `Engine` that discovers mode classes from `modes/`. Key design:
 
 ```
 Engine.__init__()      — loads config, initializes per-mode state
 Engine.run()           — main loop: load_ctrl() → apply params → render mode → write status
-Engine.mode_fns[]      — list of 17 method references, indexed by self.mode
+Engine.modes[]         — discovered Mode objects, indexed by self.mode
 Engine._bar()          — status line at bottom row (always rendered)
-Engine._precompute_polar() — caches (dist, angle) per cell for TUNNEL and VORTEX on resize
 ```
 
 **Module-level utilities:**
@@ -50,17 +51,23 @@ PALETTES = [  # 6 palettes
 
 ### ii.py
 
-Curses TUI. Single class `Controller`. Writes `control.json` every loop iteration. Reads `status.json` for live feedback display.
+Curses TUI. Single class `NodeEngine`. Writes `control.json` every loop iteration. Reads `status.json` for live feedback display.
 
 **control.json schema:**
 ```json
 {
-  "mode": 0-16,
+  "mode": 0-18,
+  "mode_b": 0-18,
+  "layer_b_enabled": bool,
+  "mode_lock": bool,
   "auto_cycle": bool,
   "blackout": bool,
   "flash_active": bool,
   "bpm_sync": bool,
   "palette": 0-5,
+  "primary_color": -1 to 9,
+  "secondary_color": -1 to 9,
+  "accent_color": -1 to 9,
   "flash_text": "string",
   "frame_delay": 0.01-0.20,
   "strobe_speed": 1-10,
@@ -68,13 +75,23 @@ Curses TUI. Single class `Controller`. Writes `control.json` every loop iteratio
   "wave_amplitude": 0.10-0.50,
   "rain_density": 0.10-1.0,
   "mode_cycle_frames": 50-600,
-  "bpm": 40-240
+  "bpm": 40-240,
+  "audio_level": 0.0-1.0,
+  "audio_peak": 0.0-1.0,
+  "camera4_motion": 0.0-1.0,
+  "camera4_brightness": 0.0-1.0,
+  "camera4_online": bool,
+  "camera2_motion": 0.0-1.0,
+  "camera2_brightness": 0.0-1.0,
+  "camera2_online": bool
 }
 ```
 
+**Layer B compositing:** `layer_b_enabled` activates A/B mode blending. `mode` = layer A source, `mode_b` = layer B source. Non-space cells from B overwrite A. Toggle with `X` key.
+
 ---
 
-## 17 Modes
+## 19 Modes
 
 ```
 0  RAIN       — columnar falling chars with phosphor trail
@@ -94,6 +111,8 @@ Curses TUI. Single class `Controller`. Writes `control.json` every loop iteratio
 14 CUBE       — rotating 3D wireframe cube via rot3d + bresenham
 15 SHOCKWAVE  — multiple expanding ring objects, BPM-syncable spawn
 16 NOISE      — smooth multi-sine noise field, char+color by value
+17 LIQUID     — MOCT poster look: white block-type over blue/magenta fluid forms, mic+camera reactive
+18 POSTER     — hard flyer system: stacked oversized type, arcs, stage labels, block glitch background
 ```
 
 ---
@@ -101,12 +120,13 @@ Curses TUI. Single class `Controller`. Writes `control.json` every loop iteratio
 ## Per-mode State
 
 Modes that maintain state between frames:
-- `self.rain_y` (dict) — column head positions for RAIN
-- `self.particles` (list of dicts) — active particles for PARTICLES
-- `self.rings` (list of dicts) — active rings for SHOCKWAVE
-- `self.storm_pts` (list of tuples) — current lightning branch points for STORM
+
+- `self.col_y` (dict) — column head positions for RAIN (`Rain.__init__`)
+- `self.particles` (list of dicts) — active particles for PARTICLES (`Particles.__init__`)
+- `self.rings` (list of dicts) — active rings for SHOCKWAVE (`Shockwave.__init__`)
+- `self.storm_pts` (list of tuples) — current lightning branch points for STORM (`Storm.__init__`)
 - `self.storm_age` (int) — frames until next lightning regeneration
-- `self._tcache` / `self._vcache` — precomputed polar coord grids for TUNNEL/VORTEX
+- `self.cache` / `self.cache_sz` — precomputed polar coord grids for TUNNEL and VORTEX, rebuilt on resize
 
 ---
 
@@ -136,16 +156,34 @@ if os.path.getmtime(__file__) != self._mtime:
 
 ## How to Add a New Mode
 
-1. Add a method `_mymode(self)` to `Engine`
-2. Append it to `self.mode_fns` in `__init__`
-3. Append its name string to `self.mode_labels` in `__init__`
-4. Add to `MODES` list in `ii.py`
-5. Save → hot-reload activates it
+1. Create `modes/mymode.py` with a class subclassing `Mode`:
 
-Accessing palette: `p = self.pal` then `C[p['p']]`, `C[p['s']]`, `C[p['a']]`  
-Accessing control values: `self.ctrl.get('flash_text', '')`, `self.cfg.get('bpm', 140)`  
-Drawing a cell: `self._put(x, y, char, color_string)`  
-Drawing a full frame buffer: build `out = []`, `out.append(mv(0,y))` per row, cells inline, then `sys.stdout.write(''.join(out))`
+   ```python
+   from modes.base import C, Mode
+
+   class MyMode(Mode):
+       NAME = 'MYMODE'
+       ORDER = 19  # controls sort order in the mode list
+
+       def render(self, buf, w, h, t, frame, cfg, pal, syms):
+           p = pal
+           # write to buf[y][x] = (char, color_str) or None
+   ```
+
+2. Save → `architecture.discover_modes()` picks it up automatically on next hot-reload.
+3. Optionally add it to `nodes.py` GRAPH `Seq([...])` to include it in auto-cycle.
+
+Modes with internal state add `__init__`:
+
+```python
+def __init__(self):
+    self.mystate = []
+```
+
+Accessing palette: `p = pal` then `C[p['p']]`, `C[p['s']]`, `C[p['a']]`
+Accessing control values: `cfg.get('flash_text', '')`, `cfg.get('bpm', 140)`
+Drawing a cell: `self.put(buf, x, y, char, color_str, w, h)`
+Clearing the buffer: `self.clear(buf, w, h)`
 
 ---
 

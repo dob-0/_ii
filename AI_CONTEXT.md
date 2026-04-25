@@ -6,13 +6,13 @@ Paste this file into any AI chat to get full project context instantly.
 
 ## What This Is
 
-A live VJ (video jockey) terminal visual engine built in Python for a techno music event — MOCT 7th Anniversary at Hayfilm Studio, Yerevan 2026. It runs in a Kitty GPU-accelerated terminal and outputs pure ASCII/Unicode art using ANSI escape codes. No libraries beyond Python stdlib.
+A live VJ (video jockey) terminal visual engine built in Python for a techno music event — MOCT 7th Anniversary at Hayfilm Studio, Yerevan 2026. It runs in a Kitty GPU-accelerated terminal and outputs pure ASCII/Unicode art using ANSI escape codes. Optional mic/camera nodes use `sounddevice`, `numpy`, and `opencv-python`; Art-Net output uses stdlib UDP.
 
 Two terminals run simultaneously:
 - **Fullscreen terminal** → `python3 visuals.py` (the visuals, fullscreen Kitty)
 - **Control terminal** → `python3 ii.py` (live parameter control, curses TUI)
 
-The user describes changes in natural language and the AI edits `visuals.py`. A hot-reload system detects file saves and restarts the engine automatically in ~1 second — the performance never stops.
+The user describes changes in natural language. Edit `modes/*.py` for visuals, `nodes.py` for live patching, `ii.py` for controller UI, and `node_lib.py` for new node types. Hot reload restarts visuals when `visuals.py` or mode files change, and the controller hot-reloads `nodes.py`.
 
 ---
 
@@ -20,8 +20,11 @@ The user describes changes in natural language and the AI edits `visuals.py`. A 
 
 ```
 mct7/
-├── visuals.py      — MAIN FILE. Visual engine. 17 modes. Edit this for visual changes.
-├── ii.py   — Curses TUI controller. Edit for new controls/UI.
+├── visuals.py      — visual compositor/runtime
+├── modes/          — visual modes, one class per file, discovered by ORDER
+├── ii.py           — live deck controller. Edit for new controls/UI.
+├── node_lib.py     — signal, sensor, processor, and Art-Net node types
+├── nodes.py        — live patch graph
 ├── config.json     — Startup defaults (symbols, frame_delay, etc.)
 ├── control.json    — Live IPC: controller writes this, visuals reads it every frame
 ├── status.json     — Live IPC: visuals writes this (fps, frame, mode), controller reads it
@@ -41,8 +44,8 @@ mct7/
 class Engine:
     def __init__(self):
         # loads config.json
-        # initializes per-mode state (self.rain_y, self.particles, etc.)
-        # builds self.mode_fns = [self._rain, self._wave, ...]  # 17 methods
+        # discovers Mode classes from modes/*.py
+        # builds self.modes = [Rain(), Wave(), ...]
         # builds self.mode_labels = ['RAIN', 'WAVE', ...]
 
     def run(self):
@@ -52,7 +55,7 @@ class Engine:
         # 3. write status.json every 10 frames
         # 4. handle blackout
         # 5. select mode
-        # 6. call self.mode_fns[self.mode]()
+# 6. call self.modes[self.mode].render(...)
         # 7. draw flash overlay if active
         # 8. draw status bar
         # 9. sys.stdout.flush()

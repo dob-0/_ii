@@ -1,9 +1,232 @@
 #!/usr/bin/env python3
-"""MOCT 7 | node_lib — signal generators and processors for nodes.py"""
+"""MOCT 7 | node_lib — signal generators, processors, and output nodes."""
 
-import math, random
+import math, random, socket, threading, time
+
+try:
+    import numpy as _np
+except Exception:
+    _np = None
+
+try:
+    import sounddevice as _sd
+except Exception:
+    _sd = None
+
+try:
+    import cv2 as _cv2
+except Exception:
+    _cv2 = None
 
 TAU = math.tau
+
+
+def _clamp(v, lo=0.0, hi=1.0):
+    return max(lo, min(hi, v))
+
+
+class _AudioInputHub:
+    """Shared microphone input reader.
+
+    Optional backend: sounddevice + numpy.
+    Exposes normalized level and pulse-friendly peak values.
+    """
+    _instance = None
+    _lock = threading.Lock()
+
+    def __init__(self):
+        self.level = 0.0
+        self.peak = 0.0
+        self.error = None
+        self.ready = False
+        self._stream = None
+        self._started = False
+
+    @classmethod
+    def get(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
+
+    def start(self, device=None, samplerate=22050, channels=1, gain=6.0, smoothing=0.82):
+        if self._started:
+            return self
+        self._started = True
+        if _sd is None or _np is None:
+            self.error = 'install numpy and sounddevice for audio nodes'
+            return self
+
+        gain = max(0.01, float(gain))
+        smoothing = _clamp(float(smoothing), 0.0, 0.999)
+
+        def callback(indata, frames, callback_time, status):
+            if status:
+                self.error = str(status)
+            try:
+                mono = _np.asarray(indata)
+                if mono.size == 0:
+                    return
+                rms = float(_np.sqrt(_np.mean(_np.square(mono))))
+                val = _clamp(rms * gain)
+                self.level = self.level * smoothing + val * (1.0 - smoothing)
+                self.peak = max(val, self.peak * 0.92)
+                self.ready = True
+            except Exception as exc:
+                self.error = str(exc)
+
+        try:
+            self._stream = _sd.InputStream(
+                device=device,
+                channels=channels,
+                samplerate=samplerate,
+                callback=callback,
+                blocksize=0,
+            )
+            self._stream.start()
+        except Exception as exc:
+            self.error = str(exc)
+        return self
+
+
+def _source_key(source):
+    return str(source)
+
+
+def _video_capture_source(source):
+    if isinstance(source, str):
+        stripped = source.strip()
+        if stripped.isdigit():
+            return int(stripped)
+        return stripped
+    return source
+
+
+class _CameraInputHub:
+    """Shared camera reader for simple motion/brightness metrics."""
+    _instances = {}
+    _lock = threading.Lock()
+
+    def __init__(self, source=0):
+        self.source = source
+        self.motion = 0.0
+        self.brightness = 0.0
+        self.presence = 0.0
+        self.error = None
+        self.ready = False
+        self._started = False
+        self._thread = None
+
+    @classmethod
+    def get(cls, source=0):
+        key = _source_key(source)
+        with cls._lock:
+            if key not in cls._instances:
+                cls._instances[key] = cls(source)
+            return cls._instances[key]
+
+    def start(self, fps=12.0, width=160, height=90, motion_gain=5.0, smoothing=0.75):
+        if self._started:
+            return self
+        self._started = True
+        if _cv2 is None or _np is None:
+            self.error = 'install numpy and opencv-python for camera nodes'
+            return self
+
+        fps = max(1.0, float(fps))
+        motion_gain = max(0.1, float(motion_gain))
+        smoothing = _clamp(float(smoothing), 0.0, 0.999)
+
+        def worker():
+            cap = None
+            prev = None
+            delay = 1.0 / fps
+            try:
+                cap = _cv2.VideoCapture(_video_capture_source(self.source))
+                cap.set(_cv2.CAP_PROP_FRAME_WIDTH, width)
+                cap.set(_cv2.CAP_PROP_FRAME_HEIGHT, height)
+                while True:
+                    ok, frame = cap.read()
+                    if not ok or frame is None:
+                        self.error = 'camera read failed'
+                        self.presence = 0.0
+                        time.sleep(delay)
+                        continue
+                    gray = _cv2.cvtColor(frame, _cv2.COLOR_BGR2GRAY)
+                    small = _cv2.resize(gray, (64, 36))
+                    bright = float(_np.mean(small) / 255.0)
+                    if prev is None:
+                        mot = 0.0
+                    else:
+                        diff = _cv2.absdiff(small, prev)
+                        mot = _clamp(float(_np.mean(diff) / 255.0) * motion_gain)
+                    prev = small
+                    self.brightness = self.brightness * smoothing + bright * (1.0 - smoothing)
+                    self.motion = self.motion * smoothing + mot * (1.0 - smoothing)
+                    self.presence = 1.0
+                    self.ready = True
+                    time.sleep(delay)
+            except Exception as exc:
+                self.error = str(exc)
+                self.presence = 0.0
+            finally:
+                if cap is not None:
+                    cap.release()
+
+        self._thread = threading.Thread(target=worker, name='mct7-camera', daemon=True)
+        self._thread.start()
+        return self
+
+
+class _ArtNetSender:
+    """Minimal Art-Net DMX sender.
+
+    One sender owns one 512-channel universe buffer and sends ArtDMX packets over UDP.
+    """
+    _instances = {}
+    _lock = threading.Lock()
+
+    def __init__(self, host='127.0.0.1', port=6454, universe=0, length=512):
+        self.host = host
+        self.port = int(port)
+        self.universe = int(universe)
+        self.length = max(2, min(512, int(length)))
+        self.buf = bytearray(self.length)
+        self.error = None
+        self.enabled = bool(host)
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    @classmethod
+    def get(cls, host='127.0.0.1', port=6454, universe=0, length=512):
+        key = (host, int(port), int(universe), int(length))
+        with cls._lock:
+            if key not in cls._instances:
+                cls._instances[key] = cls(host, port, universe, length)
+            return cls._instances[key]
+
+    def set_channel(self, channel, value):
+        idx = int(channel) - 1
+        if not (0 <= idx < self.length):
+            return
+        self.buf[idx] = max(0, min(255, int(round(value))))
+
+    def send(self):
+        if not self.enabled:
+            return
+        packet = bytearray()
+        packet.extend(b'Art-Net\x00')
+        packet.extend((0x00, 0x50))  # OpDmx, little endian
+        packet.extend((0x00, 0x0e))  # protocol version 14
+        packet.extend((0x00, 0x00))  # sequence, physical
+        packet.extend((self.universe & 0xff, (self.universe >> 8) & 0xff))
+        packet.extend(((self.length >> 8) & 0xff, self.length & 0xff))
+        packet.extend(self.buf)
+        try:
+            self._sock.sendto(packet, (self.host, self.port))
+            self.error = None
+        except Exception as exc:
+            self.error = str(exc)
 
 
 class Node:
@@ -106,6 +329,85 @@ class BeatPulse(Node):
         if self._on > 0:
             self._on -= 1; return 1.0
         return 0.0
+
+
+class AudioLevel(Node):
+    """Normalized microphone RMS level in [0, 1].
+
+    Optional dependency: numpy + sounddevice.
+    Returns 0 when backend is unavailable.
+    """
+    def __init__(self, device=None, gain=6.0, smoothing=0.82):
+        self.device = device
+        self.gain = gain
+        self.smoothing = smoothing
+        self.hub = _AudioInputHub.get().start(device=device, gain=gain, smoothing=smoothing)
+
+    def evaluate(self, t, bpm, frame, state):
+        return self.hub.level
+
+
+class AudioPeak(Node):
+    """Fast-decaying microphone peak level in [0, 1]."""
+    def __init__(self, device=None, gain=8.0, smoothing=0.7):
+        self.device = device
+        self.gain = gain
+        self.smoothing = smoothing
+        self.hub = _AudioInputHub.get().start(device=device, gain=gain, smoothing=smoothing)
+
+    def evaluate(self, t, bpm, frame, state):
+        return self.hub.peak
+
+
+class AudioTrigger(Node):
+    """One-shot trigger when microphone level crosses threshold."""
+    def __init__(self, threshold=0.45, cooldown=6, device=None, gain=8.0):
+        self.threshold = threshold
+        self.cooldown = max(1, int(cooldown))
+        self._cool = 0
+        self.hub = _AudioInputHub.get().start(device=device, gain=gain)
+
+    def evaluate(self, t, bpm, frame, state):
+        if self._cool > 0:
+            self._cool -= 1
+        if self._cool <= 0 and self.hub.peak >= self.threshold:
+            self._cool = self.cooldown
+            return 1.0
+        return 0.0
+
+
+class CameraMotion(Node):
+    """Normalized camera motion amount in [0, 1].
+
+    Optional dependency: numpy + opencv-python.
+    Returns 0 when backend is unavailable.
+    """
+    def __init__(self, index=0, source=None, fps=12.0, gain=5.0, smoothing=0.75):
+        self.source = index if source is None else source
+        self.hub = _CameraInputHub.get(self.source).start(fps=fps, motion_gain=gain, smoothing=smoothing)
+
+    def evaluate(self, t, bpm, frame, state):
+        return self.hub.motion
+
+
+class CameraBrightness(Node):
+    """Normalized average camera brightness in [0, 1]."""
+    def __init__(self, index=0, source=None, fps=12.0, smoothing=0.75):
+        self.source = index if source is None else source
+        self.hub = _CameraInputHub.get(self.source).start(fps=fps, smoothing=smoothing)
+
+    def evaluate(self, t, bpm, frame, state):
+        return self.hub.brightness
+
+
+class CameraPresence(Node):
+    """Returns 1 when camera frames are flowing, else 0."""
+    def __init__(self, index=0, source=None, fps=12.0):
+        self.source = index if source is None else source
+        self.hub = _CameraInputHub.get(self.source).start(fps=fps)
+
+    def evaluate(self, t, bpm, frame, state):
+        return self.hub.presence
 
 
 # ── Processors ────────────────────────────────────────────────────────────────
@@ -229,3 +531,55 @@ class BoolOut(Node):
         v = self.node.evaluate(t, bpm, frame, state) > self.threshold
         state[self.param] = v
         return float(v)
+
+
+class ArtNetOut(Node):
+    """Send a node value to one DMX channel over Art-Net.
+
+    channel is 1-based. The node value is remapped from [in_min, in_max] to
+    [out_min, out_max], then sent at most `fps` times per second.
+    """
+    def __init__(self, channel, node, host='127.0.0.1', universe=0, port=6454,
+                 in_min=0.0, in_max=1.0, out_min=0, out_max=255, fps=30,
+                 param=None, enabled=True):
+        self.channel = int(channel)
+        self.node = node
+        self.in_min = in_min
+        self.in_max = in_max
+        self.out_min = out_min
+        self.out_max = out_max
+        self.fps = max(1.0, float(fps))
+        self.param = param or f'artnet_ch_{self.channel}'
+        self.enabled = enabled
+        self.sender = _ArtNetSender.get(host=host, port=port, universe=universe)
+        self._next_send = 0.0
+
+    def evaluate(self, t, bpm, frame, state):
+        raw = self.node.evaluate(t, bpm, frame, state)
+        span = self.in_max - self.in_min or 1
+        n = _clamp((raw - self.in_min) / span)
+        value = self.out_min + n * (self.out_max - self.out_min)
+        dmx = max(0, min(255, int(round(value))))
+        state[self.param] = dmx
+        if self.enabled and t >= self._next_send:
+            self.sender.set_channel(self.channel, dmx)
+            self.sender.send()
+            self._next_send = t + 1.0 / self.fps
+        return dmx
+
+
+class ArtNetRGB(Node):
+    """Send three node values to consecutive RGB DMX channels."""
+    def __init__(self, start_channel, red, green, blue, host='127.0.0.1',
+                 universe=0, port=6454, fps=30, param='artnet_rgb', enabled=True):
+        self.param = param
+        self.red = ArtNetOut(start_channel, red, host, universe, port, fps=fps, enabled=enabled)
+        self.green = ArtNetOut(start_channel + 1, green, host, universe, port, fps=fps, enabled=enabled)
+        self.blue = ArtNetOut(start_channel + 2, blue, host, universe, port, fps=fps, enabled=enabled)
+
+    def evaluate(self, t, bpm, frame, state):
+        r = self.red.evaluate(t, bpm, frame, state)
+        g = self.green.evaluate(t, bpm, frame, state)
+        b = self.blue.evaluate(t, bpm, frame, state)
+        state[self.param] = f'{r},{g},{b}'
+        return max(r, g, b) / 255.0
