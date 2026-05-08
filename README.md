@@ -4,8 +4,7 @@ Terminal-first VJ and projection toolkit for live club use. `_ii` combines a
 curses control deck, ANSI terminal visuals, pygame/KMS output, projection
 mapping, audio/camera automation, MIDI/OSC input, and optional Art-Net output.
 
-The repo grew out of the MOCT show system, but the current project name and
-runtime entrypoint are `_ii`.
+The current project name and runtime entrypoint are `_ii`.
 
 ## Quick Start
 
@@ -55,6 +54,78 @@ Commit and push all repo changes:
 
 ```bash
 scripts/git-sync.sh "describe the change"
+```
+
+## Remote Management
+
+The `ii` script at `~/bin/ii` manages the full engine over SSH — no physical access needed.
+
+```bash
+ii start                   # start everything
+ii stop                    # stop everything
+ii restart [vis|ctrl|web]  # restart one component
+ii status                  # show what is running
+ii attach                  # open _ii.py deck in current terminal
+ii logs [vis|web]          # live log tail
+ii update                  # git pull + hot-reload applies within 1s
+ii watch [seconds]         # auto-pull loop for live performance
+```
+
+The engine runs three components:
+
+| Component | What | Where |
+| --- | --- | --- |
+| `vis` | `visuals.py` — ANSI renderer | TTY1 (projector) |
+| `web` | `map_server.py` — browser control panel | `:7777` |
+| `ctrl` | `_ii.py` — curses deck | tmux session `ii` |
+
+Attach to the live deck from any SSH session:
+
+```bash
+ssh dob@192.168.88.136 -t "tmux attach -t ii"
+```
+
+Browser control panel — any device on the network:
+
+```
+http://192.168.88.136:7777
+```
+
+## Boot Setup
+
+Three systemd services start automatically on every boot:
+
+| Service | Role |
+| --- | --- |
+| `ii-visuals.service` | `visuals.py` on TTY1 (projector) |
+| `ii-web.service` | `map_server.py` on `:7777` |
+| `ii-ctrl.service` | `_ii.py` deck in tmux session `ii` |
+
+Service management:
+
+```bash
+sudo systemctl restart ii-visuals   # restart visuals
+sudo systemctl restart ii-web       # restart web panel
+sudo systemctl restart ii-ctrl      # restart deck
+sudo journalctl -fu ii-visuals      # live visuals log
+```
+
+## Live Update Workflow
+
+Edit on laptop → push → pull on Debian → hot-reload applies within ~1 second, no restart needed:
+
+```bash
+# laptop
+git push
+
+# debian
+ii update
+```
+
+During a performance, auto-apply every push:
+
+```bash
+ii watch 10    # polls git every 10s, pulls and applies automatically
 ```
 
 ## Install Notes
@@ -175,7 +246,7 @@ Current mode order:
 | 18 | `POSTER` |
 | 19 | `MAPTST` |
 
-`LIQUID` and `POSTER` keep the MOCT visual language. `MAPTST` is for checking
+`LIQUID` and `POSTER` are identity modes with large block-text and arc graphics. `MAPTST` is for checking
 projection surfaces and zone layout.
 
 ## Palettes And Symbols
