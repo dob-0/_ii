@@ -40,9 +40,25 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .tab-btn.active{color:var(--tab-active);border-color:var(--border3)}
 
 /* ── tab panes ── */
-#tab-map,#tab-ctrl{flex:1;display:none;overflow:hidden}
+#tab-map,#tab-ctrl,#tab-zones{flex:1;display:none;overflow:hidden}
 #tab-map.active{display:flex}
 #tab-ctrl.active{display:flex;overflow-y:auto}
+#tab-zones.active{display:flex;flex-direction:column;overflow:hidden}
+
+/* ════════════════════════════════════════
+   ZONES TAB
+   ════════════════════════════════════════ */
+#zones-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0}
+#zones-toolbar label{font-size:9px;letter-spacing:2px;color:var(--text4)}
+#zones-toolbar select{width:160px;padding:3px 6px}
+#zones-toolbar span{margin-left:auto;font-size:10px;color:var(--text4)}
+#zones-body{flex:1;overflow-y:auto;padding:12px}
+#zones-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.zone-card{background:var(--bg1);border:1px solid var(--border);border-left:3px solid #444;border-radius:3px;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.zone-id{font-size:12px;font-weight:bold;letter-spacing:2px;color:var(--text)}
+.zone-card select{width:100%}
+.zone-card .toggle-wrap{font-size:10px;color:var(--text3)}
+.zone-empty{color:var(--text4);font-size:11px;padding:20px}
 
 /* ════════════════════════════════════════
    MAP TAB — original layout preserved
@@ -134,8 +150,9 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 <!-- ── tab header ──────────────────────────────────────── -->
 <div id="header">
   <span class="logo">ii</span>
-  <button class="tab-btn active" id="btn-map" onclick="switchTab('map')">[ MAP ]</button>
-  <button class="tab-btn"        id="btn-ctrl" onclick="switchTab('ctrl')">[ CTRL ]</button>
+  <button class="tab-btn active" id="btn-map"   onclick="switchTab('map')">[ MAP ]</button>
+  <button class="tab-btn"        id="btn-zones" onclick="switchTab('zones')">[ ZONES ]</button>
+  <button class="tab-btn"        id="btn-ctrl"  onclick="switchTab('ctrl')">[ CTRL ]</button>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -175,6 +192,19 @@ canvas{cursor:crosshair;image-rendering:pixelated}
     <span>drag corners to warp · click surface to select · N new · Del delete</span>
     <span id="coords"></span>
   </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     ZONES TAB
+     ════════════════════════════════════════ -->
+<div id="tab-zones">
+  <div id="zones-toolbar">
+    <label>FILE</label>
+    <select id="zones-file-sel" onchange="zonesLoadFile(this.value)"></select>
+    <button class="cbtn" onclick="zonesLoad()" style="width:auto;padding:3px 10px;margin-top:0">REFRESH</button>
+    <span id="zones-status">●</span>
+  </div>
+  <div id="zones-body"><div id="zones-grid"></div></div>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -306,12 +336,13 @@ const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22
 let activeTab='map';
 function switchTab(t){
   activeTab=t;
-  document.getElementById('tab-map').classList.toggle('active',t==='map');
-  document.getElementById('tab-ctrl').classList.toggle('active',t==='ctrl');
-  document.getElementById('btn-map').classList.toggle('active',t==='map');
-  document.getElementById('btn-ctrl').classList.toggle('active',t==='ctrl');
+  ['map','zones','ctrl'].forEach(n=>{
+    document.getElementById('tab-'+n).classList.toggle('active',t===n);
+    document.getElementById('btn-'+n).classList.toggle('active',t===n);
+  });
   if(t==='map'){resize();}
   if(t==='ctrl'){startCtrlPoll();}
+  if(t==='zones'){zonesInit();}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -710,6 +741,92 @@ buildPaletteGrid();
     applyCtrlToUI(c);
   }catch(e){}
 })();
+
+// ══════════════════════════════════════════════════════════════
+//  ZONES TAB
+// ══════════════════════════════════════════════════════════════
+let zonesFile='fb_map.json';
+let zonesSurfaces=[];
+let zonesInited=false;
+let zonesPollTimer=null;
+
+async function zonesInit(){
+  if(!zonesInited){
+    zonesInited=true;
+    // populate file selector (reuse same list)
+    try{
+      const r=await fetch('/api/list');const files=await r.json();
+      const sel=document.getElementById('zones-file-sel');sel.innerHTML='';
+      files.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;if(f===zonesFile)o.selected=true;sel.appendChild(o)});
+    }catch(e){}
+  }
+  await zonesLoad();
+  clearInterval(zonesPollTimer);
+  zonesPollTimer=setInterval(()=>{if(activeTab==='zones')zonesLoad()},2000);
+}
+
+function zonesLoadFile(f){zonesFile=f;zonesLoad();}
+
+async function zonesLoad(){
+  try{
+    const r=await fetch('/api/mapping?file='+zonesFile);
+    const d=await r.json();
+    zonesSurfaces=d.surfaces||[];
+    renderZonesGrid();
+    document.getElementById('zones-status').style.color='#33aa33';
+  }catch(e){
+    document.getElementById('zones-status').style.color='#aa3333';
+  }
+}
+
+function renderZonesGrid(){
+  const g=document.getElementById('zones-grid');
+  if(!zonesSurfaces.length){g.innerHTML='<div class="zone-empty">no surfaces in this mapping</div>';return;}
+  g.innerHTML='';
+  zonesSurfaces.forEach((s,i)=>{
+    const col=COLS[i%COLS.length];
+    const card=document.createElement('div');
+    card.className='zone-card';
+    card.style.borderLeftColor=col;
+
+    const modeOpts='<option value="null"'+(s.mode===null?' selected':'')+'>∅  follow active</option>'+
+      MODES.map((n,mi)=>`<option value="${mi}"${s.mode===mi?' selected':''}>${mi}  ${n}</option>`).join('');
+
+    card.innerHTML=`
+      <div class="zone-id" style="color:${col}">${s.id||'SURF-'+i}</div>
+      <select onchange="zoneSet(${i},'mode',this.value==='null'?null:+this.value)">${modeOpts}</select>
+      <label class="toggle-wrap">
+        <input type="checkbox" class="toggle" ${s.enabled!==false?'checked':''}
+               onchange="zoneSet(${i},'enabled',this.checked)">
+        ENABLED
+      </label>
+      <div class="slider-row" style="margin-bottom:0">
+        <label style="width:40px">PHASE</label>
+        <input type="range" min="0" max="8" step="0.1" value="${s.phase||0}"
+               oninput="zoneSet(${i},'phase',parseFloat(this.value));this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1)">
+        <span class="sval">${(s.phase||0).toFixed(1)}</span>
+      </div>`;
+    g.appendChild(card);
+  });
+}
+
+function zoneSet(i,key,val){
+  zonesSurfaces[i][key]=val;
+  zonesSave();
+  // reflect immediately in renderSide if map tab was editing same file
+  if(curFile===zonesFile){surfaces=JSON.parse(JSON.stringify(zonesSurfaces));renderSide();draw();}
+}
+
+async function zonesSave(){
+  try{
+    await fetch('/api/save?file='+zonesFile,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:zonesFile.replace('.json',''),surfaces:zonesSurfaces})
+    });
+    document.getElementById('zones-status').textContent='✓';
+    setTimeout(()=>document.getElementById('zones-status').textContent='●',800);
+  }catch(e){}
+}
 </script></body></html>"""
 
 

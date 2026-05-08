@@ -331,8 +331,8 @@ class Engine:
                     prev_mode = self.mode
                     self._trans_frames = 6
 
-                # Reload mapping configs every 60 frames
-                if self.frame - self._map_reload_frame >= 60:
+                # Reload mapping configs every 3 frames (~real-time)
+                if self.frame - self._map_reload_frame >= 3:
                     self._mappings = load_mappings()
                     self._map_reload_frame = self.frame
 
