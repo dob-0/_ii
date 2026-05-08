@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ii — Terminal Visual Engine"""
+"""_ii — Terminal Visual Engine"""
 
 import os
 import pkgutil
@@ -147,7 +147,7 @@ class Engine:
             if idx > 0 or mname not in ('DEFAULT', 'default', ''):
                 map_part = f' | MAP:{mname}'
         txt = (
-            f' ii{layer} | {label} | {self.pal["name"]} | '
+             f'_ii{layer} | {label} | {self.pal["name"]} | '
             f'{bpm}BPM{sync}{map_part} | {self._fps:.0f}fps | {time.time() - self.t0:06.1f}s '
         )
         return C['dim'] + txt[: self.w].ljust(self.w) + RESET
@@ -376,7 +376,7 @@ class Engine:
 def _quit(sig, frame):
     sys.stdout.write(SHOW + RESET + CLEAR)
     sys.stdout.flush()
-    print('[ ii VISUAL ENGINE STOPPED ]')
+    print('[ _ii VISUAL ENGINE STOPPED ]')
     sys.exit(0)
 
 

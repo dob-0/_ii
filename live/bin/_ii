@@ -1,0 +1,89 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+die() {
+    printf '_ii: %s\n' "$*" >&2
+    exit 1
+}
+
+need() {
+    command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
+}
+
+glsl_cmd() {
+    if command -v glslviewer >/dev/null 2>&1; then
+        printf '%s\n' glslviewer
+    elif command -v glslViewer >/dev/null 2>&1; then
+        printf '%s\n' glslViewer
+    else
+        die "missing command: glslviewer or glslViewer"
+    fi
+}
+
+usage() {
+    cat <<EOF
+_ii live commands:
+  _ii ansi [field|scan]             run shell/awk terminal visuals
+  _ii c-ansi                        compile and run the C terminal engine
+  _ii shader [shader.frag]          run a GLSL shader with glslviewer
+  _ii audio [patch.scd]             run a SuperCollider patch with sclang
+  _ii render [out.mkv] [seconds]    generate an ffmpeg lavfi render
+  _ii tmux                          start the tmux live layout
+
+Environment:
+  _II_FPS=30
+  _II_GLSL_ARGS="--drm"
+  _II_SIZE=1920x1080
+  CC=clang
+EOF
+}
+
+cmd=${1:-help}
+if [ "$#" -gt 0 ]; then
+    shift
+fi
+
+case "$cmd" in
+    ansi)
+        engine=${1:-field}
+        case "$engine" in
+            field) exec "$ROOT/engines/ansi/field.sh" ;;
+            scan) exec "$ROOT/engines/ansi/scan.sh" ;;
+            *) die "unknown ansi engine: $engine" ;;
+        esac
+        ;;
+    c-ansi)
+        exec "$ROOT/bin/c-ansi" "$@"
+        ;;
+    shader)
+        shader=${1:-"$ROOT/shaders/ion-field.frag"}
+        [ -f "$shader" ] || die "shader not found: $shader"
+        viewer=$(glsl_cmd)
+        # shellcheck disable=SC2086
+        exec "$viewer" "$shader" ${_II_GLSL_ARGS:-}
+        ;;
+    audio)
+        patch=${1:-"$ROOT/scd/ion-dust.scd"}
+        [ -f "$patch" ] || die "patch not found: $patch"
+        need sclang
+        exec sclang "$patch"
+        ;;
+    render)
+        out=${1:-"$ROOT/out/ritual.mkv"}
+        dur=${2:-20}
+        exec "$ROOT/engines/ffmpeg/ritual.sh" "$out" "$dur"
+        ;;
+    tmux)
+        exec "$ROOT/tmux/studio.sh"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        die "unknown command: $cmd"
+        ;;
+esac
+

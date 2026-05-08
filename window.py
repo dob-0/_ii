@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage-aware launcher for MOCT7 visuals.
+"""_ii — stage-aware launcher for visuals.
 
 Usage:
   python3 window.py           # spawn visuals in a dedicated terminal window
@@ -16,9 +16,9 @@ import time
 from architecture import BASE, CONFIG_PATH, VISUALS_PATH, load_json
 
 WINDOW_CHILD_ENV = 'MCT7_WINDOW_CHILD'
-DEFAULT_TITLE = 'MOCT7-VISUALS'
+DEFAULT_TITLE = 'ii-VISUALS'
 AUTO_SECOND_MONITOR = 'auto-second'
-KWIN_SCRIPT_NAME = 'mct7_visuals_placement'
+KWIN_SCRIPT_NAME = 'ii_visuals_placement'
 KWIN_SCRIPT_PATH = os.path.join(BASE, 'scripts', 'kwin-place-visuals.js')
 
 
@@ -246,6 +246,21 @@ def _apply_window_rules(cfg, title):
             subprocess.run(['wmctrl', '-r', title, '-b', 'add,fullscreen'], check=False)
         except Exception:
             pass
+
+
+def toggle_fullscreen(title=None):
+    """Toggle fullscreen on the visuals window by title (X11/XWayland via wmctrl)."""
+    cfg = _cfg()
+    t = title or _title(cfg)
+    if shutil.which('wmctrl'):
+        subprocess.run(
+            ['wmctrl', '-r', t, '-b', 'toggle,fullscreen'],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return True
+    return False
 
 
 def spawn_window():

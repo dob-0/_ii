@@ -1,6 +1,6 @@
-# MOCT 7 — AI Context
+# ii — AI Context
 
-This is a live VJ terminal visual engine for a techno event (MOCT 7th Anniversary, Hayfilm Studio, Yerevan 2026). The user runs this during live performances and edits it in real time via prompts.
+**_ii** is a live VJ terminal visual engine. This repo is **_ii v0.1**, built for MOCT 7 (7th Anniversary, Hayfilm Studio, Yerevan 2026). v0.2 will be the same engine stripped of MOCT-specific branding — a clean generic build. The user runs this during live performances and edits it in real time via prompts.
 
 ---
 
@@ -9,11 +9,12 @@ This is a live VJ terminal visual engine for a techno event (MOCT 7th Anniversar
 Two-terminal VJ system:
 - `visuals.py` — fullscreen ASCII compositor/runtime in Kitty terminal
 - `modes/*.py` — individual visual modes, discovered dynamically by `architecture.py`
-- `ii.py` — live performance deck/controller in a second terminal
+- `_ii.py` — live performance deck/controller in a second terminal
 - `nodes.py` — live patch graph for BPM, mic, cameras, visuals, and optional Art-Net outputs
+- `window.py` — stage-aware launcher: spawns visuals in a dedicated Kitty window, optionally placed on second monitor via KWin script
 - IPC via `control.json` (controller→visuals) and `status.json` (visuals→controller)
 
-The user describes changes in natural language. Edit `modes/*.py` for visuals, `nodes.py` for live patching, `ii.py` for controller UI, and `node_lib.py` for new node types. The hot-reload system restarts visuals when `visuals.py` or a mode file changes; `ii.py` hot-reloads `nodes.py`.
+The user describes changes in natural language. Edit `modes/*.py` for visuals, `nodes.py` for live patching, `_ii.py` for controller UI, and `node_lib.py` for new node types. The hot-reload system restarts visuals when `visuals.py` or a mode file changes; `_ii.py` hot-reloads `nodes.py`.
 
 ---
 
@@ -83,7 +84,9 @@ Curses TUI. Single class `NodeEngine`. Writes `control.json` every loop iteratio
   "camera4_online": bool,
   "camera2_motion": 0.0-1.0,
   "camera2_brightness": 0.0-1.0,
-  "camera2_online": bool
+  "camera2_online": bool,
+  "sym_set": 0-5,
+  "layer_b_alpha": 0.0-1.0
 }
 ```
 
@@ -136,21 +139,13 @@ Modes that maintain state between frames:
 - TUNNEL and VORTEX: `_precompute_polar()` caches `(dist, angle)` per cell and rebuilds only on terminal resize. This avoids ~6000 atan2+sqrt calls per frame.
 - Sparse modes (CUBE, SCANNER, STORM, SHOCKWAVE, PARTICLES): touch only 200–2000 cells per frame. Much faster.
 - `frame_delay` default is 0.05s (20fps). User can lower it for faster modes or raise it if a mode is computationally heavy.
-- `self.syms` is the character palette from config.json. Use `self._s()` to pick a random one.
+- `syms` is the character list passed into `render()`. Use `random.choice(syms)` to pick a random symbol.
 
 ---
 
 ## Hot Reload
 
-```python
-# In Engine.run(), every 20 frames:
-if os.path.getmtime(__file__) != self._mtime:
-    sys.stdout.write(SHOW + RESET + CLEAR)
-    sys.stdout.flush()
-    os.execv(sys.executable, [sys.executable] + sys.argv)
-```
-
-`os.execv` replaces the process in-place. Terminal stays open, cursor is restored, new process starts fresh. Per-mode state is lost (acceptable — modes reinitialize cleanly).
+Every 20 frames, `Engine._hot_reload_if_needed()` snapshots mtimes of `visuals.py` and all `modes/*.py`. If any file changed, it calls `os.execv` to replace the process in-place. Terminal stays open, cursor is restored, new process starts fresh. Per-mode state is lost (acceptable — modes reinitialize cleanly).
 
 ---
 

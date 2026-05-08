@@ -1,5 +1,5 @@
 """
-MOCT 7 | nodes.py — Visual Automation Graph
+ii | nodes.py — Visual Automation Graph
 Edit this file. ii.py hot-reloads it automatically.
 
 Available nodes: Const, LFO, BeatLFO, Seq, Ramp, Noise, BeatPulse,

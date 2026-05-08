@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MOCT 7 | node_lib — signal generators, processors, and output nodes."""
+"""_ii | node_lib — signal generators, processors, and output nodes."""
 
 import math, random, socket, threading, time
 
@@ -374,6 +374,40 @@ class AudioTrigger(Node):
             self._cool = self.cooldown
             return 1.0
         return 0.0
+
+
+class AutoBPM(Node):
+    """Onset-detection BPM from microphone.
+
+    Detects rising edges in audio peak level and computes average interval.
+    Output: estimated BPM rounded to nearest integer, clamped to [min_bpm, max_bpm].
+    Falls back to `fallback` BPM when audio is unavailable or too few onsets.
+    """
+    def __init__(self, device=None, gain=8.0, onset_threshold=0.35,
+                 min_bpm=60, max_bpm=200, smoothing=0.75, fallback=120):
+        self.hub = _AudioInputHub.get().start(device=device, gain=gain)
+        self.threshold = float(onset_threshold)
+        self.min_bpm = int(min_bpm)
+        self.max_bpm = int(max_bpm)
+        self.smoothing = _clamp(float(smoothing), 0.0, 0.999)
+        self.fallback = float(fallback)
+        self._bpm = float(fallback)
+        self._prev_peak = 0.0
+        self._onset_times = []
+
+    def evaluate(self, t, bpm, frame, state):
+        peak = self.hub.peak
+        if peak > self.threshold and self._prev_peak <= self.threshold:
+            self._onset_times.append(t)
+            self._onset_times = [x for x in self._onset_times if t - x < 8.0][-16:]
+            if len(self._onset_times) >= 2:
+                intervals = [b - a for a, b in zip(self._onset_times, self._onset_times[1:])]
+                avg = sum(intervals) / len(intervals)
+                if avg > 0:
+                    raw = _clamp(60.0 / avg, self.min_bpm, self.max_bpm)
+                    self._bpm = self._bpm * self.smoothing + raw * (1.0 - self.smoothing)
+        self._prev_peak = peak
+        return round(self._bpm)
 
 
 class CameraMotion(Node):

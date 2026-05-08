@@ -12,7 +12,7 @@ Two terminals run simultaneously:
 - **Fullscreen terminal** → `python3 visuals.py` (the visuals, fullscreen Kitty)
 - **Control terminal** → `python3 ii.py` (live parameter control, curses TUI)
 
-The user describes changes in natural language. Edit `modes/*.py` for visuals, `nodes.py` for live patching, `ii.py` for controller UI, and `node_lib.py` for new node types. Hot reload restarts visuals when `visuals.py` or mode files change, and the controller hot-reloads `nodes.py`.
+The user describes changes in natural language. Edit `modes/*.py` for visuals, `nodes.py` for live patching, `_ii.py` for controller UI, and `node_lib.py` for new node types. Hot reload restarts visuals when `visuals.py` or mode files change, and the controller hot-reloads `nodes.py`.
 
 ---
 
@@ -22,7 +22,7 @@ The user describes changes in natural language. Edit `modes/*.py` for visuals, `
 mct7/
 ├── visuals.py      — visual compositor/runtime
 ├── modes/          — visual modes, one class per file, discovered by ORDER
-├── ii.py           — live deck controller. Edit for new controls/UI.
+├── _ii.py           — live deck controller. Edit for new controls/UI.
 ├── node_lib.py     — signal, sensor, processor, and Art-Net node types
 ├── nodes.py        — live patch graph
 ├── config.json     — Startup defaults (symbols, frame_delay, etc.)
@@ -237,7 +237,7 @@ MODES = [..., 'MYMODE']
 ## How to Add a New Parameter
 
 ```python
-# 1. Add to DEFAULTS in ii.py and use in a mode:
+# 1. Add to DEFAULTS in _ii.py and use in a mode:
 self.cfg.get('my_param', 0.5)   # in visuals.py
 
 # 2. Add to PARAMS list in ii.py:

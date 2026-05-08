@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SRC="$ROOT/engines/c/_ii_ansi.c"
+OUT="$ROOT/out/_ii_ansi"
+CC_BIN=${CC:-cc}
+
+mkdir -p "$ROOT/out"
+
+if [ ! -x "$OUT" ] || [ "$SRC" -nt "$OUT" ]; then
+    "$CC_BIN" -O2 -std=c99 -Wall -Wextra -o "$OUT" "$SRC" -lm
+fi
+
+exec "$OUT" "$@"
+

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ii — Node Engine"""
+"""_ii — Node Engine"""
 
 import curses, json, locale, math, os, subprocess, sys, time, importlib.util
 

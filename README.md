@@ -1,6 +1,6 @@
-# MOCT 7
+# ii
 
-Terminal-first visual system for club use.
+Terminal-first visual system for club use. This is **ii v0.1**, built for MOCT 7 (Hayfilm Studio, Yerevan 2026). v0.2 will be the same engine without event-specific branding.
 
 This repo is built for live VJ performance: fast startup, hot reload, simple control flow, audio-reactive visuals, camera interaction, and a colder white / blue / cyan / magenta palette direction.
 
