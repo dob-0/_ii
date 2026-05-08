@@ -48,7 +48,7 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .tab-btn.active{color:var(--tab-active);border-color:var(--border3)}
 
 /* ── tab panes ── */
-#tab-map,#tab-ctrl,#tab-zones{flex:1;display:none;overflow:hidden}
+#tab-map,#tab-ctrl,#tab-zones,#tab-outputs{flex:1;display:none;overflow:hidden}
 #tab-map.active{display:flex}
 #tab-ctrl.active{display:flex;overflow-y:auto}
 #tab-zones.active{display:flex;flex-direction:column;overflow:hidden}
@@ -173,6 +173,33 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 .alpha-row{margin-top:8px}
 .alpha-row label{font-size:9px;letter-spacing:1px;color:var(--text3);display:block;margin-bottom:4px}
 .alpha-row input[type=range]{width:100%;accent-color:var(--accent2)}
+
+/* ── OUTPUTS TAB ─────────────────────────────────────────────────────────── */
+#tab-outputs{flex-direction:column;overflow-y:auto;padding:16px;gap:0;background:var(--bg)}
+#tab-outputs.active{display:flex}
+#outputs-body{display:flex;flex-direction:column;gap:16px;max-width:780px;margin:0 auto;width:100%}
+.out-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.out-section h3{margin:0 0 10px;font-size:10px;letter-spacing:2px;color:var(--text3)}
+.out-layout-btns{display:flex;gap:8px;flex-wrap:wrap}
+.out-btn{background:#1a1a1a;color:var(--text);border:1px solid #333;border-radius:3px;padding:7px 16px;font-family:monospace;font-size:11px;letter-spacing:1px;cursor:pointer}
+.out-btn:hover{border-color:var(--accent1);color:var(--accent1)}
+.out-btn.active{border-color:var(--accent2);color:var(--accent2);background:#0d1a0d}
+.out-status{margin-top:8px;font-size:10px;color:#555;min-height:14px}
+.out-disp-list{display:flex;flex-direction:column;gap:6px}
+.out-disp-row{display:flex;align-items:center;gap:10px;font-size:11px;padding:5px 8px;background:#111;border-radius:3px}
+.out-disp-dot{width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0}
+.out-disp-dot.on{background:#3a3}
+.out-disp-name{color:var(--text);font-weight:bold;min-width:100px}
+.out-disp-res{color:var(--text3)}
+.out-disp-pos{color:#444;font-size:10px}
+.out-assign-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.out-assign-card{background:#111;border:1px solid #2a2a2a;border-radius:3px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.out-assign-label{font-size:9px;letter-spacing:2px;color:var(--text3)}
+.out-assign-disp{font-size:13px;color:var(--accent1);min-height:18px}
+.out-assign-btns{display:flex;gap:5px;flex-wrap:wrap}
+.out-assign-btns button{background:#1a1a1a;color:var(--text3);border:1px solid #2a2a2a;border-radius:2px;padding:3px 10px;font-family:monospace;font-size:10px;cursor:pointer}
+.out-assign-btns button:hover{border-color:#555;color:var(--text)}
+
 </style></head>
 <body>
 
@@ -183,6 +210,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
   <button class="tab-btn"        id="btn-zones" onclick="switchTab('zones')">[ ZONES ]</button>
   <button class="tab-btn"        id="btn-ctrl"  onclick="switchTab('ctrl')">[ CTRL ]</button>
   <button class="tab-btn"        id="btn-media" onclick="switchTab('media')">[ MEDIA ]</button>
+  <button class="tab-btn"        id="btn-outputs" onclick="switchTab('outputs')">[ OUTPUTS ]</button>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -975,7 +1003,181 @@ async function zonesSave(){
     setTimeout(()=>document.getElementById('zones-status').textContent='●',800);
   }catch(e){}
 }
-</script></body></html>"""
+</script>
+<!-- ════════════════════════════════════════
+     OUTPUTS TAB
+     ════════════════════════════════════════ -->
+<div id="tab-outputs">
+  <div id="outputs-body">
+
+    <div class="out-section">
+      <h3>DISPLAY LAYOUT</h3>
+      <div class="out-layout-btns">
+        <button class="out-btn" id="lay-extend"    onclick="setLayout('extend')">EXTEND</button>
+        <button class="out-btn" id="lay-mirror"    onclick="setLayout('mirror')">MIRROR</button>
+        <button class="out-btn" id="lay-projector" onclick="setLayout('projector')">PROJECTOR ONLY</button>
+        <button class="out-btn" id="lay-laptop"    onclick="setLayout('laptop')">LAPTOP ONLY</button>
+      </div>
+      <div id="out-layout-status" class="out-status">—</div>
+    </div>
+
+    <div class="out-section">
+      <h3>CONNECTED DISPLAYS</h3>
+      <div id="out-displays">—</div>
+    </div>
+
+    <div class="out-section">
+      <h3>ASSIGN CONTENT</h3>
+      <div class="out-assign-grid">
+        <div class="out-assign-card">
+          <div class="out-assign-label">CONTROLLER  (_ii.py)</div>
+          <div class="out-assign-disp" id="ctrl-disp-label">—</div>
+          <div class="out-assign-btns" id="ctrl-assign-btns"></div>
+        </div>
+        <div class="out-assign-card">
+          <div class="out-assign-label">VISUALS  (visuals.py)</div>
+          <div class="out-assign-disp" id="vis-disp-label">—</div>
+          <div class="out-assign-btns" id="vis-assign-btns"></div>
+        </div>
+      </div>
+      <div id="out-assign-status" class="out-status"></div>
+    </div>
+
+    <div class="out-section">
+      <h3>X11</h3>
+      <div id="out-x-status">checking…</div>
+    </div>
+
+  </div>
+</div>
+
+</body></html>"""
+
+
+# ── display management helpers ────────────────────────────────────────────────
+_ASSIGN_FILE = os.path.join(BASE, 'display_assign.json')
+
+def _parse_xrandr():
+    import re
+    try:
+        env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
+        out = subprocess.check_output(['xrandr', '--query'], env=env,
+                                      stderr=subprocess.DEVNULL, timeout=3).decode()
+    except Exception:
+        return []
+    displays = []
+    for line in out.splitlines():
+        m = re.match(r'^([\w\-]+) (connected|disconnected)(?: primary)? ?(\d+x\d+\+\d+\+\d+)?', line)
+        if m:
+            name, status, geom = m.group(1), m.group(2), m.group(3)
+            res = pos = None
+            if geom:
+                parts = geom.split('+')
+                res = parts[0]
+                pos = f'{parts[1]},{parts[2]}'
+            displays.append({'name': name, 'connected': status == 'connected',
+                             'resolution': res, 'position': pos})
+    return displays
+
+def _detect_layout(displays):
+    active = [d for d in displays if d['resolution']]
+    if not active:
+        return 'none'
+    if len(active) == 1:
+        return 'projector' if 'HDMI' in active[0]['name'] else 'laptop'
+    positions = set(d['position'] for d in active if d['position'])
+    return 'mirror' if len(positions) == 1 else 'extend'
+
+def _load_assign():
+    try:
+        with open(_ASSIGN_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {'ctrl': None, 'vis': None}
+
+def _save_assign(a):
+    with open(_ASSIGN_FILE, 'w') as fh:
+        json.dump(a, fh)
+
+def _x_running():
+    return os.path.exists('/tmp/.X11-unix/X0')
+
+def _get_display_names(displays):
+    laptop = projector = None
+    for d in displays:
+        n = d['name']
+        if any(k in n for k in ('LVDS', 'eDP', 'LVDS-1', 'eDP-1')):
+            laptop = n
+        elif any(k in n for k in ('HDMI', 'DP-', 'DisplayPort')):
+            if projector is None:
+                projector = n
+    return laptop, projector
+
+def _apply_layout(layout):
+    env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
+    displays = _parse_xrandr()
+    laptop, projector = _get_display_names(displays)
+    try:
+        if layout == 'extend':
+            cmd = ['xrandr']
+            if laptop:
+                cmd += ['--output', laptop, '--auto', '--primary']
+            if projector:
+                ref = laptop or 'LVDS-1'
+                cmd += ['--output', projector, '--auto', '--right-of', ref]
+            subprocess.run(cmd, env=env, timeout=5)
+            return 'extended desktop applied'
+        elif layout == 'mirror':
+            cmd = ['xrandr']
+            if laptop:
+                cmd += ['--output', laptop, '--auto', '--primary']
+            if projector and laptop:
+                cmd += ['--output', projector, '--same-as', laptop]
+            subprocess.run(cmd, env=env, timeout=5)
+            return 'mirror applied'
+        elif layout == 'projector':
+            cmd = ['xrandr']
+            if laptop:
+                cmd += ['--output', laptop, '--off']
+            if projector:
+                cmd += ['--output', projector, '--auto', '--primary']
+            subprocess.run(cmd, env=env, timeout=5)
+            return 'projector only'
+        elif layout == 'laptop':
+            cmd = ['xrandr']
+            if projector:
+                cmd += ['--output', projector, '--off']
+            if laptop:
+                cmd += ['--output', laptop, '--auto', '--primary']
+            subprocess.run(cmd, env=env, timeout=5)
+            return 'laptop only'
+        elif layout == 'start':
+            xscript = '/home/dob/_ii/scripts/start-x.sh'
+            subprocess.Popen(['sudo', '-u', 'dob', 'bash', '-c',
+                              f'startx {xscript} -- :0 vt7 &'],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return 'X11 starting on VT7…'
+    except Exception as e:
+        return f'error: {e}'
+    return f'unknown layout: {layout}'
+
+def _assign_content(role, display):
+    env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
+    assign = _load_assign()
+    assign[role] = display
+    _save_assign(assign)
+    displays = _parse_xrandr()
+    disp = next((d for d in displays if d['name'] == display), None)
+    if not disp or not disp['position']:
+        return f'{role} saved → {display} (position unknown)'
+    px, py = disp['position'].split(',')
+    title = '_ii controller' if role == 'ctrl' else '_ii visuals'
+    try:
+        subprocess.run(['wmctrl', '-r', title, '-e', f'0,{px},{py},-1,-1'],
+                       env=env, timeout=3)
+        return f'{role} moved → {display.replace("card0-","")} ({px},{py})'
+    except Exception as e:
+        return f'saved; wmctrl: {e}'
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1018,6 +1220,15 @@ class Handler(BaseHTTPRequestHandler):
         elif p.path == '/api/playstatus':
             playing = _mpv_proc is not None and _mpv_proc.poll() is None
             self._json({'playing': playing, 'file': getattr(_mpv_proc, '_filename', '') if playing else ''})
+        elif p.path == '/api/displays':
+            displays = _parse_xrandr()
+            self._json({
+                'displays': displays,
+                'layout': _detect_layout(displays),
+                'assign': _load_assign(),
+                'x_running': _x_running(),
+                'display': ':0',
+            })
         else:
             self._send(404, 'text/plain', b'not found')
 
@@ -1090,6 +1301,12 @@ class Handler(BaseHTTPRequestHandler):
             _mpv_proc = None
             subprocess.run(['pkill', '-CONT', '-f', 'visuals.py'], capture_output=True)
             self._json({'ok': True})
+        elif p.path == '/api/display-layout':
+            msg = _apply_layout(body.get('layout', ''))
+            self._json({'ok': True, 'msg': msg})
+        elif p.path == '/api/display-assign':
+            msg = _assign_content(body.get('role', ''), body.get('display', ''))
+            self._json({'ok': True, 'msg': msg})
         else:
             self._send(404, 'text/plain', b'not found')
 
