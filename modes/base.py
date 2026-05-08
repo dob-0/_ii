@@ -27,6 +27,8 @@ PALETTES = [
     {'name': 'NEON',   'p': 'magenta', 's': 'cyan',    'a': 'white'},
     {'name': 'ULTRA',  'p': 'yellow',  's': 'magenta', 'a': 'white'},
     {'name': 'DEEP',   'p': 'blue',    's': 'magenta', 'a': 'cyan'},
+    {'name': 'BLOOD',  'p': 'red',     's': 'red_d',   'a': 'white'},
+    {'name': 'EMBER',  'p': 'red',     's': 'yellow',  'a': 'white'},
 ]
 
 LOGO = [

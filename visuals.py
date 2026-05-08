@@ -177,17 +177,24 @@ class Engine:
         dim = getattr(self, '_master_dim', 1.0)
         apply_dim = dim < 0.999
         out = []
+        prev_col = None
         for y in range(self.render_h):
             out.append(mv(0, y))
             for x in range(self.w):
                 cell = self.buf[y][x]
                 if cell is None or (apply_dim and random.random() > dim):
+                    if prev_col is not None:
+                        out.append(RESET)
+                        prev_col = None
                     out.append(' ')
                 else:
                     ch, col = cell
-                    out.append(col)
+                    if col != prev_col:
+                        out.append(col)
+                        prev_col = col
                     out.append(ch)
-                    out.append(RESET)
+        if prev_col is not None:
+            out.append(RESET)
         out.append(mv(0, self.h - 1))
         out.append(self._bar())
         return ''.join(out)

@@ -62,8 +62,10 @@ def render_zones(buf, w, render_h, modes, active_mode, mapping, merged, pal, sym
         zone_cfg = dict(merged)
         zone_cfg['_map_zone_id'] = zone.get('id', '')
 
+        t_zone = t + float(zone.get('phase', 0.0))
+
         sub = [[None] * zw for _ in range(zh)]
-        modes[mode_idx].render(sub, zw, zh, t, frame, zone_cfg, pal, syms)
+        modes[mode_idx].render(sub, zw, zh, t_zone, frame, zone_cfg, pal, syms)
 
         for sy in range(zh):
             dy = zy + sy

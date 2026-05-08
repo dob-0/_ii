@@ -23,7 +23,7 @@ MODE_NAMES = discover_mode_names()
 MODE_MAX = max(0, len(MODE_NAMES) - 1)
 COLOR_KEYS = ['red','green','white','dim','cyan','yellow','magenta','red_d','green_d','blue']
 SYMBOL_SET_NAMES = ['BLOCK','ASCII','DIGIT','GRID','SHAPES','MATH']
-PALETTE_NAMES = ['STEEL','ACID','VOID','NEON','ULTRA','DEEP']
+PALETTE_NAMES = ['STEEL','ACID','VOID','NEON','ULTRA','DEEP','BLOOD','EMBER']
 PALETTE_ROLES = [
     ('blue',    'cyan',    'white'),
     ('cyan',    'yellow',  'white'),
@@ -31,6 +31,8 @@ PALETTE_ROLES = [
     ('magenta', 'cyan',    'white'),
     ('yellow',  'magenta', 'white'),
     ('blue',    'magenta', 'cyan'),
+    ('red',     'red_d',   'white'),
+    ('red',     'yellow',  'white'),
 ]
 COLOR_ROLES = {'primary_color': 0, 'secondary_color': 1, 'accent_color': 2}
 MODE_NODE_PARAMS = {
@@ -46,7 +48,7 @@ PARAM_META_ROWS = [
     ('mode_b',           'MODE B      ', 0,    MODE_MAX,  'int'),
     ('layer_b_enabled',  'LAYER B     ', 0,    1,   'bool'),
     ('mode_lock',        'MODE LOCK   ', 0,    1,   'bool'),
-    ('palette',          'PALETTE     ', 0,    5,   'palette'),
+    ('palette',          'PALETTE     ', 0,    7,   'palette'),
     ('primary_color',    'PRIMARY     ', -1,   9,   'color'),
     ('secondary_color',  'SECONDARY   ', -1,   9,   'color'),
     ('accent_color',     'ACCENT      ', -1,   9,   'color'),
@@ -78,7 +80,7 @@ MAIN_CONTROLS = [
     ('mode_b',           'MODE B      ', 0,    MODE_MAX,  'int'),
     ('layer_b_enabled',  'LAYER B     ', 0,    1,   'bool'),
     ('mode_lock',        'MODE LOCK   ', 0,    1,   'bool'),
-    ('palette',          'PALETTE     ', 0,    5,   'palette'),
+    ('palette',          'PALETTE     ', 0,    7,   'palette'),
     ('primary_color',    'PRIMARY     ', -1,   9,   'color'),
     ('secondary_color',  'SECONDARY   ', -1,   9,   'color'),
     ('accent_color',     'ACCENT      ', -1,   9,   'color'),
@@ -97,17 +99,17 @@ MAIN_KEYS = {key for key, _label, _mn, _mx, _kind in MAIN_CONTROLS}
 PARAM_META = {key: (label, mn, mx, kind) for key, label, mn, mx, kind in PARAM_META_ROWS}
 
 PRESETS = {
-    # F1-F10: quick scene launches — mode + palette + params
-    curses.KEY_F1:  {'mode': 0,  'palette': 2, 'rain_density': 0.95, 'frame_delay': 0.04,  'layer_b_enabled': False},
-    curses.KEY_F2:  {'mode': 3,  'palette': 4, 'strobe_speed': 1,    'bpm_sync': True,     'layer_b_enabled': False},
-    curses.KEY_F3:  {'mode': 7,  'palette': 0, 'frame_delay': 0.03,  'layer_b_enabled': False},
-    curses.KEY_F4:  {'mode': 13, 'palette': 3, 'glitch_intensity': 0.75},
-    curses.KEY_F5:  {'mode': 8,  'palette': 5, 'wave_amplitude': 0.45},
-    curses.KEY_F6:  {'mode': 9,  'palette': 3, 'frame_delay': 0.035},
-    curses.KEY_F7:  {'mode': 10, 'palette': 0, 'frame_delay': 0.04},
-    curses.KEY_F8:  {'mode': 2,  'palette': 4, 'glitch_intensity': 1.0},
-    curses.KEY_F9:  {'mode': 14, 'palette': 1, 'frame_delay': 0.03},
-    curses.KEY_F10: {'mode': 17, 'palette': 5, 'layer_b_enabled': True, 'mode_b': 8, 'layer_b_alpha': 0.6},
+    # MOCT night — F1→F10: warm-up → build → peak → close
+    curses.KEY_F1:  {'mode': 7,  'palette': 2, 'frame_delay': 0.06, 'bpm': 130, 'bpm_sync': True,  'layer_b_enabled': False},                       # TUNNEL  VOID    warm-up
+    curses.KEY_F2:  {'mode': 0,  'palette': 6, 'rain_density': 0.9, 'frame_delay': 0.05, 'bpm': 132, 'bpm_sync': True, 'layer_b_enabled': False},   # RAIN    BLOOD   build
+    curses.KEY_F3:  {'mode': 2,  'palette': 0, 'glitch_intensity': 0.7, 'bpm': 135, 'bpm_sync': True, 'layer_b_enabled': False},                    # GLITCH  STEEL   mid
+    curses.KEY_F4:  {'mode': 9,  'palette': 5, 'frame_delay': 0.04, 'bpm': 138, 'bpm_sync': True, 'layer_b_enabled': False},                       # VORTEX  DEEP    hypnotic
+    curses.KEY_F5:  {'mode': 8,  'palette': 3, 'bpm': 140, 'bpm_sync': True, 'layer_b_enabled': False},                                            # PLASMA  NEON    acid wash
+    curses.KEY_F6:  {'mode': 13, 'palette': 6, 'bpm': 140, 'bpm_sync': True, 'layer_b_enabled': False},                                            # STORM   BLOOD   peak/drop
+    curses.KEY_F7:  {'mode': 3,  'palette': 6, 'strobe_speed': 1,   'bpm': 140, 'bpm_sync': True, 'layer_b_enabled': False},                       # STROBE  BLOOD   flash
+    curses.KEY_F8:  {'mode': 12, 'palette': 7, 'bpm': 132, 'bpm_sync': True, 'layer_b_enabled': True, 'mode_b': 16, 'layer_b_alpha': 0.4},         # SCANNER EMBER + NOISE
+    curses.KEY_F9:  {'mode': 7,  'palette': 6, 'bpm': 140, 'bpm_sync': True, 'layer_b_enabled': True, 'mode_b': 2,  'layer_b_alpha': 0.5},         # TUNNEL  BLOOD + GLITCH
+    curses.KEY_F10: {'mode': 17, 'palette': 5, 'bpm': 128, 'bpm_sync': True, 'layer_b_enabled': True, 'mode_b': 16, 'layer_b_alpha': 0.35},        # LIQUID  DEEP  + NOISE  close
 }
 
 
@@ -336,7 +338,7 @@ class NodeEngine:
         elif key in (ord('g'), ord('G')):
             self._cycle_mapping()
         elif key in (ord('p'), ord('P')):
-            ov['palette'] = (int(self.state.get('palette', 0)) + 1) % 6
+            ov['palette'] = (int(self.state.get('palette', 0)) + 1) % len(PALETTE_NAMES)
         elif key in (ord('f'), ord('F')):
             ov['sym_set'] = (int(self.state.get('sym_set', 0)) + 1) % len(SYMBOL_SET_NAMES)
         elif key in (ord('t'), ord('T')):
@@ -465,7 +467,7 @@ class NodeEngine:
             self.overrides['mode_b'] = int(value) % len(MODE_NAMES)
             return
         if key == 'palette':
-            value = int(value) % (len(MODE_NAMES) if key == 'mode' else 6)
+            value = int(value) % (len(MODE_NAMES) if key == 'mode' else len(PALETTE_NAMES))
         else:
             value = max(mn, min(mx, value))
             if kind == 'int':
