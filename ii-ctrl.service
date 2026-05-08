@@ -1,0 +1,15 @@
+[Unit]
+Description=ii Controller (tmux session: ii)
+After=ii-visuals.service ii-web.service
+
+[Service]
+Type=forking
+User=dob
+WorkingDirectory=/home/dob/_ii
+ExecStart=/usr/bin/tmux new-session -d -s ii -x 220 -y 50 '/usr/bin/python3 /home/dob/_ii/_ii.py'
+ExecStop=/usr/bin/tmux kill-session -t ii
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

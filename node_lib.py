@@ -173,7 +173,7 @@ class _CameraInputHub:
                 if cap is not None:
                     cap.release()
 
-        self._thread = threading.Thread(target=worker, name='mct7-camera', daemon=True)
+        self._thread = threading.Thread(target=worker, name='mct-camera', daemon=True)
         self._thread.start()
         return self
 

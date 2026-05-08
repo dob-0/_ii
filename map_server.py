@@ -268,7 +268,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
     <div class="ctrl-section">
       <h3>FLASH TEXT</h3>
       <div class="flash-row">
-        <input type="text" id="flash-input" placeholder="MOCT 7" value="MOCT 7"
+        <input type="text" id="flash-input" placeholder="MOCT" value="MOCT"
                onkeydown="if(event.key==='Enter')triggerFlash()">
         <button class="cbtn" onclick="triggerFlash()">TRIGGER</button>
       </div>
@@ -649,7 +649,7 @@ function tapTempo(){
 }
 
 function triggerFlash(){
-  const txt=document.getElementById('flash-input').value||'MOCT 7';
+  const txt=document.getElementById('flash-input').value||'MOCT';
   ctrlSet('flash_text',txt);
   ctrlSet('flash_active',true);
   clearTimeout(flashTimer);

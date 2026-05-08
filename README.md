@@ -4,7 +4,7 @@ Terminal-first VJ and projection toolkit for live club use. `_ii` combines a
 curses control deck, ANSI terminal visuals, pygame/KMS output, projection
 mapping, audio/camera automation, MIDI/OSC input, and optional Art-Net output.
 
-The repo grew out of the MOCT 7 show system, but the current project name and
+The repo grew out of the MOCT show system, but the current project name and
 runtime entrypoint are `_ii`.
 
 ## Quick Start

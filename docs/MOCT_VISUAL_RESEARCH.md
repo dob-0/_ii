@@ -3,7 +3,7 @@
 Current public context checked April 25, 2026:
 
 - MOCT started in 2019 and describes itself as an Armenian electronic music and contemporary art collective.
-- The April 25, 2026 anniversary event is MOCT 7 at Hayfilm Cluster.
+- The April 25, 2026 anniversary event is MOCT at Hayfilm Cluster.
 - Hayfilm is central to the identity: MOCT describes it as a renovated post-Soviet film site with permanent stages.
 - Stage language matters: STUDIO, BAR, PROJECTOR ROOM, and BAK appear repeatedly in public listings and poster systems.
 
@@ -26,7 +26,7 @@ Poster language from the supplied screenshots:
 
 Implementation mapping:
 
-- `LIQUID` mode: anniversary identity, chrome/liquid movement, large MOCT/7 type.
+- `LIQUID` mode: anniversary identity, chrome/liquid movement, large MOCT type.
 - `POSTER` mode: generic MOCT flyer system, stage labels, metadata, arcs, block artifacts.
 - `nodes.py`: mic and camera energy drive both modes through `audio_level`, `audio_peak`, `camera4_motion`, and `camera2_motion`.
 - `ArtNetOut` / `ArtNetRGB`: optional lighting output nodes for syncing fixtures to the same graph.

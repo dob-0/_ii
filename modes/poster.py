@@ -41,8 +41,7 @@ class Poster(Mode):
     ORDER = 18
 
     WORDS = [
-        'MOCT', 'HAYFILM', 'STUDIO', 'BAR', 'PROJECTOR', 'BAK',
-        'YEREVAN', '25-26', 'APRIL', '7 YEARS',
+        'MOCT', 'HAYFILM', 'STUDIO', 'BAR', 'PROJECTOR', 'BAK', 'YEREVAN',
     ]
 
     def _block(self, buf, w, h, text, y0, col, scale=1):
@@ -123,9 +122,9 @@ class Poster(Mode):
 
         # Scale block text to fit width
         if phase == 0:
-            line1, line2 = 'MOCT', '7'
+            line1, line2 = 'MOCT', ''
             sc1 = max(1, min(3, (w - 4) // (4 * 6 + 3)))
-            sc2 = max(1, min(5, (w - 4) // 8))
+            sc2 = sc1
         elif phase == 1:
             line1, line2 = 'HAYFILM', 'CLUSTER'
             sc1 = max(1, min(2, (w - 4) // (7 * 6 + 6)))
@@ -142,9 +141,8 @@ class Poster(Mode):
 
         # Corner metadata
         meta = [
-            ('25-26 APRIL', 2, 1),
             ('HAYFILM CLUSTER', max(2, w - 17), 1),
-            ('MOCT 07 YEARS', 2, max(1, h - 3)),
+            ('HAYFILM STUDIO', 2, max(1, h - 3)),
             ('YEREVAN', max(2, w - 9), max(1, h - 3)),
         ]
         for text, x, y in meta:

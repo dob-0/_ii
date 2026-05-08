@@ -15,7 +15,7 @@ import time
 
 from architecture import BASE, CONFIG_PATH, VISUALS_PATH, load_json
 
-WINDOW_CHILD_ENV = 'MCT7_WINDOW_CHILD'
+WINDOW_CHILD_ENV = 'MCT_WINDOW_CHILD'
 DEFAULT_TITLE = 'ii-VISUALS'
 AUTO_SECOND_MONITOR = 'auto-second'
 KWIN_SCRIPT_NAME = 'ii_visuals_placement'

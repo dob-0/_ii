@@ -47,7 +47,6 @@ class Liquid(Mode):
                     buf[y][x] = (random.choice([' ', ' ', '.', '·']), C['dim']) if random.random() < 0.14 else None
 
         title = 'MOCT'
-        sub = '7'
         tx = max(1, (w - len(title) * 6) // 2)
         ty = max(1, h // 7)
         block = {
@@ -64,14 +63,6 @@ class Liquid(Mode):
                     if cell != ' ':
                         self.put(buf, xoff + gx, ty + gy, '█', C['white'], w, h)
             xoff += 6
-
-        sy = min(h - 7, max(ty + 7, h // 2))
-        sx = max(1, (w - 7) // 2)
-        seven = ['█████', '    █', '   █ ', '  █  ', ' █   ', '█    ']
-        for gy, row in enumerate(seven):
-            for gx, cell in enumerate(row):
-                if cell != ' ':
-                    self.put(buf, sx + gx, sy + gy, '█', C['white'], w, h)
 
         arc_r = min(w, h * 2) * (0.28 + energy * 0.08)
         ox = w * 0.60

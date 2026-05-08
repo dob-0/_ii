@@ -576,7 +576,7 @@ class NodeEngine:
     def _edit_flash_text(self):
         h, w = self.scr.getmaxyx()
         prompt = ' FLASH TEXT > '
-        current = str(self.state.get('flash_text', 'MOCT 7'))
+        current = str(self.state.get('flash_text', 'MOCT'))
         curses.echo()
         curses.curs_set(1)
         self.scr.nodelay(False)

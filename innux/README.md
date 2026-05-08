@@ -1,4 +1,4 @@
-# MOCT 7 | HAYFILM CLUSTER
+# MOCT | HAYFILM CLUSTER
 ### Terminal Visual Engine v1.0
 
 ## ⚡ Overview
@@ -16,4 +16,4 @@ This directory houses the **innux** visual core for live projections at **Hayfil
    bash innux/matrix.sh
    node innux/glitch.js
 
-*Developed for the MOCT 7th Anniversary - Yerevan, 2026.*
+*Developed for the MOCTth Anniversary - Yerevan, 2026.*

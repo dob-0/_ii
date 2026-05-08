@@ -33,7 +33,7 @@ class Cube(Mode):
             if not p0 or not p1:
                 continue
             col = ecols[ei % 3]
-            ch = random.choice(['█', '▓', '◈', '7', 'M'])
+            ch = random.choice(['█', '▓', '◈', '▌', '▐'])
             for bx, by in bresenham(p0[0], p0[1], p1[0], p1[1]):
                 if 0 <= bx < w and 0 <= by < h:
                     buf[by][bx] = (ch, col)

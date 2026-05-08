@@ -1,6 +1,8 @@
 # ii — AI Context
 
-**_ii** is a live VJ terminal visual engine. This repo is **_ii v0.1**, built for MOCT 7 (7th Anniversary, Hayfilm Studio, Yerevan 2026). v0.2 will be the same engine stripped of MOCT-specific branding — a clean generic build. The user runs this during live performances and edits it in real time via prompts.
+**_ii** is a live VJ terminal visual engine — a clean generic build for Hayfilm Studio, Yerevan. The user runs this during live performances and edits it in real time via prompts.
+
+Remote management: `ii start|stop|restart|status|attach|update|watch` (script at `~/bin/ii` on the Debian host). Visuals run on TTY1; the curses deck runs in tmux session `ii`; the web panel runs at `:7777`.
 
 ---
 
@@ -101,7 +103,7 @@ Curses TUI. Single class `NodeEngine`. Writes `control.json` every loop iteratio
 1  WAVE       — 3 overlapping sine waves (grid buffer approach)
 2  GLITCH     — random scanline corruption + occasional logo flash
 3  STROBE     — full-fill / blank alternation, BPM-syncable
-4  LOGO       — MOCT 7 big box-drawing text centered on noise bg
+4  LOGO       — MOCT big box-drawing text centered on noise bg
 5  PULSE      — BPM-synced expanding ring (polar distance per cell)
 6  TEXT       — flash_text in scrolling bands + centered big text
 7  TUNNEL     — inverse radial projection, precomputed polar cache

@@ -33,7 +33,7 @@ DEFAULTS = {
     'primary_color': -1,
     'secondary_color': -1,
     'accent_color': -1,
-    'flash_text': 'MOCT 7',
+    'flash_text': 'MOCT',
     'frame_delay': 0.05,
     'strobe_speed': 2,
     'glitch_intensity': 0.4,

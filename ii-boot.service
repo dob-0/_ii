@@ -1,0 +1,15 @@
+[Unit]
+Description=ii VJ Engine (auto-start)
+After=multi-user.target
+Conflicts=getty@tty1.service
+
+[Service]
+Type=forking
+User=dob
+ExecStart=/home/dob/bin/ii start
+ExecStop=/home/dob/bin/ii stop
+RemainAfterExit=yes
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

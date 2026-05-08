@@ -1,4 +1,4 @@
-# MOCT 7 — Project Context for AI Assistants
+# MOCT — Project Context for AI Assistants
 
 Paste this file into any AI chat to get full project context instantly.
 
@@ -6,7 +6,7 @@ Paste this file into any AI chat to get full project context instantly.
 
 ## What This Is
 
-A live VJ (video jockey) terminal visual engine built in Python for a techno music event — MOCT 7th Anniversary at Hayfilm Studio, Yerevan 2026. It runs in a Kitty GPU-accelerated terminal and outputs pure ASCII/Unicode art using ANSI escape codes. Optional mic/camera nodes use `sounddevice`, `numpy`, and `opencv-python`; Art-Net output uses stdlib UDP.
+A live VJ (video jockey) terminal visual engine built in Python for a techno music event — MOCTth Anniversary at Hayfilm Studio, Yerevan 2026. It runs in a Kitty GPU-accelerated terminal and outputs pure ASCII/Unicode art using ANSI escape codes. Optional mic/camera nodes use `sounddevice`, `numpy`, and `opencv-python`; Art-Net output uses stdlib UDP.
 
 Two terminals run simultaneously:
 - **Fullscreen terminal** → `python3 visuals.py` (the visuals, fullscreen Kitty)
@@ -19,7 +19,7 @@ The user describes changes in natural language. Edit `modes/*.py` for visuals, `
 ## File Map
 
 ```
-mct7/
+mct/
 ├── visuals.py      — visual compositor/runtime
 ├── modes/          — visual modes, one class per file, discovered by ORDER
 ├── _ii.py           — live deck controller. Edit for new controls/UI.
@@ -121,7 +121,7 @@ bresenham(x0, y0, x1, y1)     # integer line drawing, returns list of (x,y)
 1  WAVE       grid buffer — 3 overlapping sine waves
 2  GLITCH     random scanline corruption, occasional LOGO flash at frame%53
 3  STROBE     fill/blank alternation, BPM-syncable via self._beat_phase()
-4  LOGO       MOCT 7 box-drawing text, noise background
+4  LOGO       MOCT box-drawing text, noise background
 5  PULSE      BPM-synced expanding ring, polar distance per cell
 6  TEXT       self.ctrl['flash_text'] in scrolling bands + centered
 7  TUNNEL     self._tcache — precomputed (dist, angle) per cell, inverse radial
@@ -160,7 +160,7 @@ self._vcache   = None     # [[row_rn, row_a], ...] — precomputed for VORTEX
   "flash_active": false,
   "bpm_sync": false,
   "palette": 0,
-  "flash_text": "MOCT 7",
+  "flash_text": "MOCT",
   "frame_delay": 0.05,
   "strobe_speed": 2,
   "glitch_intensity": 0.4,
@@ -278,4 +278,4 @@ Old standalone scripts from before the main engine was built. Separate codebase,
 
 ---
 
-*MOCT 7 | Hayfilm Studio | Yerevan 2026*
+*MOCT | Hayfilm Studio | Yerevan 2026*

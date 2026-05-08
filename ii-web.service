@@ -1,0 +1,14 @@
+[Unit]
+Description=ii Web Control Panel (:7777)
+After=network.target
+
+[Service]
+Type=simple
+User=dob
+WorkingDirectory=/home/dob/_ii
+ExecStart=/usr/bin/python3 /home/dob/_ii/map_server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
