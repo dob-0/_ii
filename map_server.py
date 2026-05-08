@@ -6,15 +6,23 @@ Open on any browser:        http://192.168.88.136:7777
 
 import json
 import os
+import signal
+import subprocess
 import sys
 import tempfile
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from email.parser import BytesParser
+from email.policy import default as email_default
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from architecture import MAPPINGS_DIR, CTRL_PATH, STATUS_PATH, discover_mode_names, save_json_atomic, load_json
 
 PORT = 7777
+BASE = os.path.dirname(os.path.abspath(__file__))
+MEDIA_DIR = os.path.join(BASE, 'media')
+
+_mpv_proc = None  # currently playing mpv process
 
 # ── embedded single-file editor app ──────────────────────────────────────────
 HTML = r"""<!DOCTYPE html>
@@ -59,6 +67,27 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .zone-card select{width:100%}
 .zone-card .toggle-wrap{font-size:10px;color:var(--text3)}
 .zone-empty{color:var(--text4);font-size:11px;padding:20px}
+
+/* ════════════════════════════════════════
+   MEDIA TAB
+   ════════════════════════════════════════ */
+#tab-media.active{display:flex;flex-direction:column;overflow:hidden}
+#media-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+#media-toolbar label{font-size:9px;letter-spacing:2px;color:var(--text4)}
+#drop-zone{flex:1;min-width:180px;border:1px dashed #333;border-radius:3px;padding:6px 12px;font-size:10px;color:#555;cursor:pointer;text-align:center;transition:border-color .2s,color .2s}
+#drop-zone:hover,#drop-zone.drag{border-color:#4488ff;color:var(--text2)}
+#drop-zone input{display:none}
+#upload-progress{font-size:10px;color:var(--accent3);display:none}
+#media-body{flex:1;overflow-y:auto;padding:12px}
+#media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.media-card{background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.media-name{font-size:11px;color:var(--text);word-break:break-all}
+.media-meta{font-size:9px;color:var(--text4);letter-spacing:1px}
+.media-btns{display:flex;gap:5px;margin-top:2px}
+.media-btns button{flex:1;padding:5px 4px;font-size:9px;letter-spacing:1px}
+#media-player-bar{background:#0a0a0a;border-top:1px solid var(--border);padding:6px 12px;font-size:10px;color:#555;display:flex;align-items:center;gap:12px;flex-shrink:0}
+#now-playing{flex:1;color:var(--text3)}
+.media-empty{color:var(--text4);font-size:11px;padding:20px}
 
 /* ════════════════════════════════════════
    MAP TAB — original layout preserved
@@ -153,6 +182,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
   <button class="tab-btn active" id="btn-map"   onclick="switchTab('map')">[ MAP ]</button>
   <button class="tab-btn"        id="btn-zones" onclick="switchTab('zones')">[ ZONES ]</button>
   <button class="tab-btn"        id="btn-ctrl"  onclick="switchTab('ctrl')">[ CTRL ]</button>
+  <button class="tab-btn"        id="btn-media" onclick="switchTab('media')">[ MEDIA ]</button>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -191,6 +221,30 @@ canvas{cursor:crosshair;image-rendering:pixelated}
     <span id="st">ready</span>
     <span>drag corners to warp · click surface to select · N new · Del delete</span>
     <span id="coords"></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MEDIA TAB
+     ════════════════════════════════════════ -->
+<div id="tab-media">
+  <div id="media-toolbar">
+    <label>MEDIA</label>
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="event.preventDefault();this.classList.remove('drag');uploadFiles(event.dataTransfer.files)">
+      <input type="file" id="file-input" multiple accept="video/*,image/*"
+             onchange="uploadFiles(this.files)">
+      DROP FILES HERE  or  CLICK TO BROWSE
+    </div>
+    <span id="upload-progress"></span>
+    <button class="cbtn" onclick="mediaLoad()" style="width:auto;padding:3px 10px;margin-top:0">REFRESH</button>
+  </div>
+  <div id="media-body"><div id="media-grid"></div></div>
+  <div id="media-player-bar">
+    <span id="now-playing">no video playing</span>
+    <button class="cbtn" id="stop-btn" onclick="mediaStop()" style="width:auto;padding:4px 14px;display:none">■ STOP</button>
   </div>
 </div>
 
@@ -336,13 +390,14 @@ const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22
 let activeTab='map';
 function switchTab(t){
   activeTab=t;
-  ['map','zones','ctrl'].forEach(n=>{
+  ['map','zones','ctrl','media'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('btn-'+n).classList.toggle('active',t===n);
   });
   if(t==='map'){resize();}
   if(t==='ctrl'){startCtrlPoll();}
   if(t==='zones'){zonesInit();}
+  if(t==='media'){mediaLoad();mediaStatusPoll();}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -743,6 +798,99 @@ buildPaletteGrid();
 })();
 
 // ══════════════════════════════════════════════════════════════
+//  MEDIA TAB
+// ══════════════════════════════════════════════════════════════
+let mediaStatusTimer=null;
+
+async function mediaLoad(){
+  try{
+    const r=await fetch('/api/media');
+    const files=await r.json();
+    renderMediaGrid(files);
+  }catch(e){}
+}
+
+function renderMediaGrid(files){
+  const g=document.getElementById('media-grid');
+  if(!files.length){g.innerHTML='<div class="media-empty">no media files — upload something above</div>';return;}
+  g.innerHTML='';
+  files.forEach(f=>{
+    const card=document.createElement('div');
+    card.className='media-card';
+    const ext=f.name.split('.').pop().toLowerCase();
+    const isVideo=['mp4','mkv','avi','mov','webm','ts','m4v'].includes(ext);
+    const sizeMB=(f.size/1024/1024).toFixed(1);
+    card.innerHTML=`
+      <div class="media-name">${f.name}</div>
+      <div class="media-meta">${isVideo?'▶ VIDEO':'🖼 IMAGE'}  ·  ${sizeMB} MB</div>
+      <div class="media-btns">
+        ${isVideo?`<button class="cbtn btn-ok" onclick="mediaPlay('${f.name}')">▶ PLAY</button>`:''}
+        <button class="cbtn btn-del" onclick="mediaDelete('${f.name}')">✕ DELETE</button>
+      </div>`;
+    g.appendChild(card);
+  });
+}
+
+async function uploadFiles(files){
+  const prog=document.getElementById('upload-progress');
+  prog.style.display='block';
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    prog.textContent=`uploading ${f.name} (${i+1}/${files.length})...`;
+    const fd=new FormData();fd.append('file',f);
+    try{
+      await fetch('/api/upload',{method:'POST',body:fd});
+    }catch(e){prog.textContent='upload error: '+e;return;}
+  }
+  prog.textContent='done ✓';
+  setTimeout(()=>{prog.style.display='none';prog.textContent=''},2000);
+  document.getElementById('file-input').value='';
+  mediaLoad();
+}
+
+async function mediaPlay(name){
+  try{
+    await fetch('/api/play',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:name})});
+    document.getElementById('now-playing').textContent='▶  '+name;
+    document.getElementById('stop-btn').style.display='';
+  }catch(e){}
+}
+
+async function mediaStop(){
+  try{
+    await fetch('/api/playstop',{method:'POST'});
+    document.getElementById('now-playing').textContent='no video playing';
+    document.getElementById('stop-btn').style.display='none';
+  }catch(e){}
+}
+
+function mediaStatusPoll(){
+  clearInterval(mediaStatusTimer);
+  mediaStatusTimer=setInterval(async()=>{
+    if(activeTab!=='media')return;
+    try{
+      const r=await fetch('/api/playstatus');
+      const d=await r.json();
+      if(d.playing){
+        document.getElementById('now-playing').textContent='▶  '+d.file;
+        document.getElementById('stop-btn').style.display='';
+      }else{
+        document.getElementById('now-playing').textContent='no video playing';
+        document.getElementById('stop-btn').style.display='none';
+      }
+    }catch(e){}
+  },2000);
+}
+
+async function mediaDelete(name){
+  if(!confirm('Delete '+name+'?'))return;
+  try{
+    await fetch('/api/media?file='+encodeURIComponent(name),{method:'DELETE'});
+    mediaLoad();
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════════
 //  ZONES TAB
 // ══════════════════════════════════════════════════════════════
 let zonesFile='fb_map.json';
@@ -834,6 +982,7 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
 
     def do_GET(self):
+        global _mpv_proc
         p = urlparse(self.path)
         qs = parse_qs(p.query)
         if p.path == '/':
@@ -851,7 +1000,6 @@ class Handler(BaseHTTPRequestHandler):
                     data = json.load(f)
             else:
                 data = {'name': fname.replace('.json', ''), 'surfaces': []}
-            # Normalise: convert x/y/w/h zones to surfaces with corners
             if 'zones' in data and 'surfaces' not in data:
                 data['surfaces'] = [_zone_to_surface(z) for z in data['zones']]
             self._json(data)
@@ -859,14 +1007,42 @@ class Handler(BaseHTTPRequestHandler):
             self._json(load_json(STATUS_PATH, {}))
         elif p.path == '/api/ctrl':
             self._json(load_json(CTRL_PATH, {}))
+        elif p.path == '/api/media':
+            os.makedirs(MEDIA_DIR, exist_ok=True)
+            files = []
+            for f in sorted(os.listdir(MEDIA_DIR)):
+                fp = os.path.join(MEDIA_DIR, f)
+                if os.path.isfile(fp):
+                    files.append({'name': f, 'size': os.path.getsize(fp)})
+            self._json(files)
+        elif p.path == '/api/playstatus':
+            playing = _mpv_proc is not None and _mpv_proc.poll() is None
+            self._json({'playing': playing, 'file': getattr(_mpv_proc, '_filename', '') if playing else ''})
+        else:
+            self._send(404, 'text/plain', b'not found')
+
+    def do_DELETE(self):
+        p = urlparse(self.path)
+        qs = parse_qs(p.query)
+        if p.path == '/api/media':
+            fname = qs.get('file', [''])[0]
+            path = os.path.join(MEDIA_DIR, os.path.basename(fname))
+            if os.path.isfile(path):
+                os.remove(path)
+                self._json({'ok': True})
+            else:
+                self._send(404, 'text/plain', b'not found')
         else:
             self._send(404, 'text/plain', b'not found')
 
     def do_POST(self):
+        global _mpv_proc
         p = urlparse(self.path)
         qs = parse_qs(p.query)
         n = int(self.headers.get('Content-Length', 0))
-        body = json.loads(self.rfile.read(n)) if n else {}
+        ct = self.headers.get('Content-Type', '')
+        raw = self.rfile.read(n) if n else b''
+        body = json.loads(raw) if n and not ct.startswith('multipart') else {}
 
         if p.path == '/api/save':
             fname = qs.get('file', ['fb_map.json'])[0]
@@ -875,10 +1051,44 @@ class Handler(BaseHTTPRequestHandler):
                 json.dump(body, f, indent=2)
             self._json({'ok': True})
         elif p.path == '/api/ctrl':
-            # Merge patch into existing control.json atomically
             existing = load_json(CTRL_PATH, {})
             existing.update(body)
             save_json_atomic(CTRL_PATH, existing)
+            self._json({'ok': True})
+        elif p.path == '/api/upload':
+            os.makedirs(MEDIA_DIR, exist_ok=True)
+            msg = BytesParser(policy=email_default).parsebytes(
+                b'Content-Type: ' + ct.encode() + b'\r\n\r\n' + raw)
+            saved = []
+            for part in msg.iter_attachments():
+                fname = part.get_filename() or 'upload'
+                fname = os.path.basename(fname)
+                dest = os.path.join(MEDIA_DIR, fname)
+                with open(dest, 'wb') as f:
+                    f.write(part.get_payload(decode=True))
+                saved.append(fname)
+            self._json({'ok': True, 'saved': saved})
+        elif p.path == '/api/play':
+            fname = body.get('file', '')
+            path = os.path.join(MEDIA_DIR, os.path.basename(fname))
+            if not os.path.isfile(path):
+                self._send(404, 'text/plain', b'file not found')
+                return
+            # pause visuals so tty1 is free
+            subprocess.run(['pkill', '-STOP', '-f', 'visuals.py'], capture_output=True)
+            if _mpv_proc and _mpv_proc.poll() is None:
+                _mpv_proc.terminate()
+            proc = subprocess.Popen(
+                ['mpv', '--vo=drm', '--loop=no', '--fs', path],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            proc._filename = fname
+            _mpv_proc = proc
+            self._json({'ok': True, 'playing': fname})
+        elif p.path == '/api/playstop':
+            if _mpv_proc and _mpv_proc.poll() is None:
+                _mpv_proc.terminate()
+            _mpv_proc = None
+            subprocess.run(['pkill', '-CONT', '-f', 'visuals.py'], capture_output=True)
             self._json({'ok': True})
         else:
             self._send(404, 'text/plain', b'not found')
@@ -909,6 +1119,6 @@ def _zone_to_surface(z):
 
 if __name__ == '__main__':
     os.makedirs(MAPPINGS_DIR, exist_ok=True)
-    
+    os.makedirs(MEDIA_DIR, exist_ok=True)
     print(f'open on your laptop:  http://192.168.88.136:{PORT}')
-    HTTPServer(('0.0.0.0', PORT), Handler).serve_forever()
+    ThreadingHTTPServer(('0.0.0.0', PORT), Handler).serve_forever()
