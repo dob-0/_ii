@@ -51,6 +51,12 @@ python3 audio.py --sensitivity 1.5
 python3 osc_server.py --port 7000
 ```
 
+Commit and push all repo changes:
+
+```bash
+scripts/git-sync.sh "describe the change"
+```
+
 ## Install Notes
 
 Core terminal visuals use the Python standard library. Extra outputs and inputs
@@ -100,6 +106,19 @@ Renderers read `control.json`:
 - `map_server.py` edits mapping files and can update live controls.
 
 `status.json` feeds liveness and FPS back into the deck/control panel.
+
+## Git Sync
+
+Use `scripts/git-sync.sh` after edits that should land on GitHub:
+
+```bash
+scripts/git-sync.sh "short commit message"
+```
+
+The script stages all repo changes with `git add -A`, commits them, pushes the
+current branch, then prints the latest commit and final branch status. Runtime
+files such as `control.json`, `status.json`, temp files, and Python caches stay
+ignored by `.gitignore`.
 
 ## Controller Keys
 
