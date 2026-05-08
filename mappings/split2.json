@@ -1,8 +1,77 @@
 {
-  "name": "2-SPLIT",
-  "desc": "Two vertical zones — left / right",
-  "zones": [
-    {"id": "LEFT",  "x": 0.0,  "y": 0.0, "w": 0.5, "h": 1.0, "mode": null, "enabled": true},
-    {"id": "RIGHT", "x": 0.5,  "y": 0.0, "w": 0.5, "h": 1.0, "mode": null, "enabled": true}
+  "name": "split2",
+  "surfaces": [
+    {
+      "id": "LEFT",
+      "corners": [
+        [
+          0,
+          0
+        ],
+        [
+          0.5,
+          0
+        ],
+        [
+          0.5,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "mode": null,
+      "phase": 0,
+      "enabled": true
+    },
+    {
+      "id": "RIGHT",
+      "corners": [
+        [
+          0.5,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0.5,
+          1
+        ]
+      ],
+      "mode": null,
+      "phase": 0,
+      "enabled": true
+    },
+    {
+      "id": "SURF-3",
+      "corners": [
+        [
+          0.25624999531938986,
+          0.11011822584706471
+        ],
+        [
+          0.4855444738469972,
+          0.12921781657012066
+        ],
+        [
+          0.47404140636233466,
+          0.5357662476751684
+        ],
+        [
+          0.22174079286540213,
+          0.4811959884664372
+        ]
+      ],
+      "mode": null,
+      "phase": 0,
+      "enabled": true
+    }
   ]
 }

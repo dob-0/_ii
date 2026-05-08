@@ -1,7 +1,53 @@
 {
-  "name": "DEFAULT",
-  "desc": "Full screen, single zone — normal A/B render",
-  "zones": [
-    {"id": "full", "x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0, "mode": null, "enabled": true}
+  "name": "default",
+  "surfaces": [
+    {
+      "id": "full",
+      "corners": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "mode": null,
+      "phase": 0,
+      "enabled": true
+    },
+    {
+      "id": "SURF-2",
+      "corners": [
+        [
+          0.10324073132173514,
+          0.15444137237884187
+        ],
+        [
+          0.2915123362600068,
+          0.14894686688433637
+        ],
+        [
+          0.32083332391432773,
+          0.48411170204917153
+        ],
+        [
+          0.1263888794698833,
+          0.4813644493019188
+        ]
+      ],
+      "mode": null,
+      "phase": 0,
+      "enabled": true
+    }
   ]
 }
