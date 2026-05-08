@@ -1,110 +1,139 @@
-# ii
+# _ii
 
-Terminal-first visual system for club use. This is **ii v0.1**, built for MOCT 7 (Hayfilm Studio, Yerevan 2026). v0.2 will be the same engine without event-specific branding.
+Terminal-first VJ and projection toolkit for live club use. `_ii` combines a
+curses control deck, ANSI terminal visuals, pygame/KMS output, projection
+mapping, audio/camera automation, MIDI/OSC input, and optional Art-Net output.
 
-This repo is built for live VJ performance: fast startup, hot reload, simple control flow, audio-reactive visuals, camera interaction, and a colder white / blue / cyan / magenta palette direction.
+The repo grew out of the MOCT 7 show system, but the current project name and
+runtime entrypoint are `_ii`.
 
-The controller is a live deck, not a settings page. It shows output state, mic energy, camera motion/brightness, automation nodes, and manual overrides in one place.
+## Quick Start
 
-## Start
-
-Main entrypoint:
+Controller plus autostarted terminal visuals:
 
 ```bash
-python3 ii.py
+python3 _ii.py
 ```
 
-What happens:
-
-1. `ii.py` opens the controller UI.
-2. It tries to autostart the visuals window through `window.py`.
-3. `window.py` spawns the visuals terminal and hands off to `visuals.py`.
-
-Manual alternatives:
+Manual terminal visuals:
 
 ```bash
 python3 window.py
 python3 visuals.py
 ```
 
-## Optional Sensor Inputs
-
-Install these only if you want mic and camera nodes:
+Pygame fullscreen/windowed output:
 
 ```bash
-pip install numpy sounddevice opencv-python
+python3 output.py --display 0
+python3 output.py --windowed 1280 720
+python3 output.py --map mappings/quad.json --vw 128 --vh 72
 ```
 
-Available first-hand nodes in `nodes.py` via `node_lib.py`:
+Projection mapper and browser control panel:
 
-- `AudioLevel()`
-- `AudioPeak()`
-- `AudioTrigger()`
-- `CameraMotion(source='/dev/video4')`
-- `CameraBrightness(source='/dev/video4')`
-- `CameraPresence(source='/dev/video4')`
-- `CameraMotion(source='/dev/video2')`
-- `CameraBrightness(source='/dev/video2')`
-- `CameraPresence(source='/dev/video2')`
-- `ArtNetOut(channel, node, host='2.0.0.10', universe=0, enabled=True)`
-- `ArtNetRGB(start_channel, red, green, blue, host='2.0.0.10', universe=0, enabled=True)`
-
-Example:
-
-```python
-from node_lib import *
-
-GRAPH = [
-    Out('glitch_intensity', Scale(CameraMotion(source='/dev/video4', gain=7.0), out_min=0.05, out_max=1.0)),
-    BoolOut('flash_active', AudioTrigger(threshold=0.55, cooldown=8, gain=10.0)),
-    BoolOut('layer_b_enabled', AudioLevel(gain=7.0), threshold=0.28),
-    # ArtNetOut(1, AudioLevel(gain=8.0), host='2.0.0.10', universe=0, enabled=True),
-]
+```bash
+python3 map_server.py
+# open http://localhost:7777
 ```
+
+Framebuffer mapper for direct `/dev/fb0` output:
+
+```bash
+python3 fb_mapper.py --map mappings/split3.json
+```
+
+Audio and OSC helpers:
+
+```bash
+python3 audio.py --list
+python3 audio.py --sensitivity 1.5
+python3 osc_server.py --port 7000
+```
+
+## Install Notes
+
+Core terminal visuals use the Python standard library. Extra outputs and inputs
+need optional packages:
+
+```bash
+pip install pygame numpy sounddevice opencv-python python-osc
+```
+
+Useful system tools for stage placement:
+
+```bash
+sudo apt install wmctrl x11-xserver-utils
+```
+
+For `fb_mapper.py`, the user running it needs access to `/dev/fb0`, usually via
+the `video` group or root on a console TTY.
+
+## Runtime Pieces
+
+| File | Role |
+| --- | --- |
+| `_ii.py` | live curses deck, node graph evaluator, manual overrides |
+| `visuals.py` | ANSI terminal renderer with A/B layers and zone mapping |
+| `window.py` | launches and places the terminal visuals window |
+| `output.py` | pygame output with fullscreen/windowed modes and quad mapping |
+| `map_server.py` | browser mapping editor plus web control panel on port `7777` |
+| `fb_mapper.py` | direct framebuffer renderer for projector/KMS setups |
+| `audio.py` | microphone level, peak, and BPM writer for `control.json` |
+| `osc_server.py` | OSC receiver mapping messages into `control.json` |
+| `nodes.py` | live automation graph; `_ii.py` hot-reloads it |
+| `node_lib.py` | signal nodes, camera/audio inputs, Art-Net outputs |
+| `modes/` | visual mode implementations |
+| `mappings/` | projection and zone layouts |
+| `live/` | headless GLSL, ANSI, SuperCollider, ffmpeg, and tmux tools |
+
+## Control Flow
+
+`_ii.py` evaluates `nodes.py`, merges node output, MIDI state, OSC/audio writes,
+and manual overrides, then writes `control.json`.
+
+Renderers read `control.json`:
+
+- `visuals.py` renders ANSI terminal output and writes `status.json`.
+- `output.py` renders through pygame and writes `status.json`.
+- `fb_mapper.py` renders directly to `/dev/fb0`.
+- `map_server.py` edits mapping files and can update live controls.
+
+`status.json` feeds liveness and FPS back into the deck/control panel.
 
 ## Controller Keys
 
 | Key | Action |
 | --- | --- |
-| `Tab` / `V` | Jump between global controls and node controls |
-| `0`-`9` | Jump to mode by number |
-| `[` / `]` | Previous / next mode |
-| `Up` / `Down` | Move selection |
-| `Left` / `Right` | Adjust selected control |
-| `X` | Toggle Layer B compositing |
-| `C` | Clear selected override |
-| `M` | Lock / release current mode |
-| `P` | Next palette |
-| `T` | Tap BPM |
-| `S` | Toggle BPM sync |
-| `Space` | Toggle flash text |
-| `Enter` | Edit flash text |
-| `A` | Toggle auto-cycle |
-| `B` | Blackout |
-| `F1`-`F10` | Presets |
-| `!` | Panic reset + blackout |
-| `Q` | Quit |
-
-## Palettes
-
-Default palette direction is now cleaner and more club-minimal:
-
-| Name | Roles |
-| --- | --- |
-| `MONO` | white / dim / blue |
-| `ICE` | cyan / blue / white |
-| `STROBE` | white / cyan / dim |
-| `SODIUM` | yellow / white / dim |
-| `ULTRA` | magenta / blue / white |
-| `NIGHTSHIFT` | blue / magenta / cyan |
-
-Manual color overrides are still available in the controller.
+| `0`-`9` | jump to mode by number |
+| `[` / `]` | previous / next mode |
+| `Up` / `Down` | move selected control |
+| `Left` / `Right` | adjust selected control |
+| `Tab` / `V` | jump between main controls and node controls |
+| `P` | next palette |
+| `F` | next symbol set |
+| `T` | tap BPM |
+| `S` | toggle BPM sync |
+| `X` | toggle layer B |
+| `M` | lock / release current mode |
+| `G` | cycle projection mapping |
+| `A` | toggle auto-cycle |
+| `B` | blackout |
+| `Space` | toggle flash text |
+| `Enter` | edit flash text |
+| `C` | clear selected override |
+| `W` | toggle visuals fullscreen |
+| `,` / `.` | previous / next cue |
+| `Z` | store current cue |
+| `F1`-`F10` | performance presets |
+| `!` | panic reset + blackout |
+| `Q` | quit |
 
 ## Modes
 
-There are 19 visual modes:
+Current mode order:
 
-| # | Name |
+| # | Mode |
 | --- | --- |
 | 0 | `RAIN` |
 | 1 | `WAVE` |
@@ -125,81 +154,127 @@ There are 19 visual modes:
 | 16 | `NOISE` |
 | 17 | `LIQUID` |
 | 18 | `POSTER` |
+| 19 | `MAPTST` |
 
-`LIQUID` is the poster-inspired MOCT look: white type over blue/magenta fluid forms, with mic and camera energy changing the movement.
-`POSTER` is the harder MOCT flyer system: stacked oversized type, stage labels, arcs, crosses, block artifacts, and scrolling metadata.
+`LIQUID` and `POSTER` keep the MOCT visual language. `MAPTST` is for checking
+projection surfaces and zone layout.
 
-## Layer System
+## Palettes And Symbols
 
-The renderer supports A/B mode compositing.
+Palettes:
 
-- `MODE` = layer A source
-- `MODE B` = layer B source
-- `LAYER B` = enable layer B
-- blend rule = non-space cells from B overwrite A
+- `STEEL`
+- `ACID`
+- `VOID`
+- `NEON`
+- `ULTRA`
+- `DEEP`
+- `BLOOD`
+- `EMBER`
 
-This is intentionally simple and performance-friendly for live play.
+Symbol sets:
 
-## Window Launcher
+- `BLOCK`
+- `ASCII`
+- `DIGIT`
+- `GRID`
+- `SHAPES`
+- `MATH`
 
-`window.py` is the stage launcher.
+Primary, secondary, and accent colors can follow the active palette or be
+overridden manually from the controller.
 
-It is responsible for:
+## Mapping
 
-- choosing a terminal backend
-- assigning a stable window title
-- requesting fullscreen
-- optional monitor / geometry placement
-- running `visuals.py`
+Bundled mapping presets:
 
-Relevant `config.json` keys:
+- `mappings/default.json` full screen
+- `mappings/split2.json` two vertical zones
+- `mappings/quad.json` four zones
+- `mappings/split3.json` three cube-style vertical zones
 
-- `autostart_visuals`
-- `visuals_launch_cmd`
-- `visuals_terminal`
-- `visuals_fullscreen`
-- `visuals_window_title`
-- `visuals_force_x11`
-- `visuals_monitor`
-- `visuals_geometry`
+`G` cycles mappings from the deck. `map_server.py` edits surface mappings in a
+browser and exposes a second control surface for mode, layer, palette, BPM,
+flash, and blackout.
 
-`visuals_monitor` can be an exact monitor name from `xrandr --query`; this setup currently targets `HDMI-A-1`. `auto-second` is also supported. On KDE Wayland, `window.py` installs a temporary KWin placement rule for `MOCT7-VISUALS`; on X11 it falls back to `wmctrl`.
+## Automation Graph
+
+Edit `nodes.py` during a session. `_ii.py` hot-reloads it automatically.
+
+Available node families include:
+
+- clocks and generators: `Const`, `LFO`, `BeatLFO`, `Seq`, `Ramp`, `Noise`
+- shaping: `Math`, `Clamp`, `Mix`, `Select`, `Hold`, `Scale`, `Gate`
+- triggers: `BeatPulse`, `AudioTrigger`
+- inputs: `AudioLevel`, `AudioPeak`, `CameraMotion`, `CameraBrightness`, `CameraPresence`
+- outputs: `Out`, `IntOut`, `BoolOut`, `ArtNetOut`, `ArtNetRGB`
+
+Example:
+
+```python
+from node_lib import *
+
+MIC = AudioLevel(gain=9.0, smoothing=0.78)
+CAM = CameraMotion(source='/dev/video4', fps=15, gain=7.0)
+
+GRAPH = [
+    Out('bpm', Const(140)),
+    IntOut('mode', Seq([17, 18, 7, 8, 3, 9], beats=8)),
+    Out('glitch_intensity', Scale(CAM, out_min=0.08, out_max=1.0)),
+    BoolOut('flash_active', AudioTrigger(threshold=0.55, cooldown=8, gain=10.0)),
+    BoolOut('layer_b_enabled', MIC, threshold=0.28),
+]
+```
+
+## OSC
+
+`osc_server.py` listens on `0.0.0.0:7000` by default. Native addresses include:
+
+- `/_ii/mode`
+- `/_ii/mode_b`
+- `/_ii/palette`
+- `/_ii/bpm`
+- `/_ii/blackout`
+- `/_ii/master_dim`
+- `/_ii/glitch`
+- `/_ii/rain`
+- `/_ii/wave`
+- `/_ii/strobe`
+- `/_ii/layer_b`
+- `/_ii/layer_b_alpha`
+- `/_ii/flash_text`
+- `/_ii/flash`
+- `/_ii/auto_cycle`
+
+Create `osc_map.json` in the project root to add or override address mappings.
 
 ## Hot Reload
 
-- edit `visuals.py` -> visuals restart in place
-- edit `nodes.py` -> controller reloads the graph
-- edit mode files in `modes/` -> visuals restart in place
-- edit `window.py` -> restart `ii.py`
+- edit `nodes.py` and `_ii.py` reloads the graph
+- edit `visuals.py` or files in `modes/` and terminal visuals restart in place
+- edit mapping JSON and `output.py` / `fb_mapper.py` reload the map on a timer
+- edit `window.py` and restart `_ii.py`
 
-## Structure
+## Repository Layout
 
 ```text
-mct7/
-├── architecture.py
-├── window.py
+_ii/
+├── _ii.py
 ├── visuals.py
-├── ii.py
+├── output.py
+├── window.py
+├── map_server.py
+├── fb_mapper.py
+├── audio.py
+├── osc_server.py
+├── architecture.py
 ├── node_lib.py
 ├── nodes.py
 ├── modes/
+├── mappings/
+├── live/
+├── innux/
+├── docs/
 ├── config.json
-├── control.json
-├── status.json
-├── README.md
-├── CLAUDE.md
-└── innux/
+└── README.md
 ```
-
-## Runtime Contract
-
-- `ii.py` writes `control.json`
-- `visuals.py` reads `control.json`
-- `visuals.py` writes `status.json`
-- `ii.py` reads `status.json`
-- `architecture.py` is the shared source of truth for paths, defaults, mode discovery, and atomic JSON writes
-- `nodes.py` is the live patch: mic, cameras, visuals, and optional Art-Net outputs are all evaluated from one graph
-
-No sockets. No server process. Keep it direct.
-
-Exception: Art-Net output nodes use UDP directly when enabled, because lighting control needs the network.

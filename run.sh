@@ -15,4 +15,4 @@ echo "[ii] starting visuals on TTY1..."
 openvt -c 1 -s -- python3 "$(pwd)/visuals.py" &
 sleep 0.5
 echo "[ii] starting controller..."
-exec python3 ii.py
+exec python3 _ii.py
