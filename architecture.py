@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared runtime architecture helpers for MOCT7 engine and controller."""
+"""Shared runtime architecture helpers for ii engine and controller."""
 
 import importlib
 import inspect
@@ -16,6 +16,7 @@ CTRL_PATH = os.path.join(BASE, 'control.json')
 STATUS_PATH = os.path.join(BASE, 'status.json')
 NODES_PATH = os.path.join(BASE, 'nodes.py')
 MODES_DIR = os.path.join(BASE, 'modes')
+MAPPINGS_DIR = os.path.join(BASE, 'mappings')
 VISUALS_PATH = os.path.join(BASE, 'visuals.py')
 WINDOW_PATH = os.path.join(BASE, 'window.py')
 
@@ -50,6 +51,8 @@ DEFAULTS = {
     'camera2_online': False,
     'sym_set': 0,
     'layer_b_alpha': 1.0,
+    'master_dim': 1.0,
+    'mapping': 0,
 }
 
 

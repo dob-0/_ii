@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MOCT 7 | HAYFILM CLUSTER — Terminal Visual Engine"""
+"""ii — Terminal Visual Engine"""
 
 import os
 import pkgutil
@@ -10,6 +10,7 @@ import sys
 import time
 
 from architecture import CONFIG_PATH, CTRL_PATH, STATUS_PATH, DEFAULTS, discover_modes, load_json, save_json_atomic
+from map_engine import load_mappings, render_zones
 from modes.base import C, ESC, HIDE, Mode, PALETTES, RESET, SHOW, color_key, mv
 
 BASE = os.path.dirname(__file__)
@@ -69,6 +70,9 @@ class Engine:
         self._trans_frames = 0
         self._zoom_tmp = [[None] * self.w for _ in range(self.render_h)]
 
+        self._mappings = load_mappings()
+        self._map_reload_frame = 0
+
     def _collect_watch_paths(self):
         paths = [os.path.abspath(__file__)]
         for module_info in pkgutil.iter_modules([MODES_DIR]):
@@ -122,6 +126,12 @@ class Engine:
             pal['name'] = f'{base["name"]}*'
         return pal
 
+    def _active_mapping(self):
+        if not self._mappings:
+            return None
+        idx = int(self.ctrl.get('mapping', 0) or 0) % len(self._mappings)
+        return self._mappings[idx]
+
     def _bar(self):
         bpm = int(self.cfg.get('bpm', 140))
         sync = ' SYNC' if self.cfg.get('bpm_sync') else ''
@@ -129,9 +139,16 @@ class Engine:
         layer = ' A+B' if self.layer_b_enabled else ' A'
         if self.layer_b_enabled:
             label = f'{label}+{self.mode_labels[self.mode_b]}'
+        map_part = ''
+        if self._mappings:
+            idx = int(self.ctrl.get('mapping', 0) or 0) % len(self._mappings)
+            m = self._mappings[idx]
+            mname = m.get('name', '')
+            if idx > 0 or mname not in ('DEFAULT', 'default', ''):
+                map_part = f' | MAP:{mname}'
         txt = (
-            f' MOCT7{layer} | {label} | {self.pal["name"]} | '
-            f'{bpm}BPM{sync} | {self._fps:.0f}fps | {time.time() - self.t0:06.1f}s '
+            f' ii{layer} | {label} | {self.pal["name"]} | '
+            f'{bpm}BPM{sync}{map_part} | {self._fps:.0f}fps | {time.time() - self.t0:06.1f}s '
         )
         return C['dim'] + txt[: self.w].ljust(self.w) + RESET
 
@@ -157,12 +174,14 @@ class Engine:
                     row_out[x] = row_a[x]
 
     def _render_buffer(self):
+        dim = getattr(self, '_master_dim', 1.0)
+        apply_dim = dim < 0.999
         out = []
         for y in range(self.render_h):
             out.append(mv(0, y))
             for x in range(self.w):
                 cell = self.buf[y][x]
-                if cell is None:
+                if cell is None or (apply_dim and random.random() > dim):
                     out.append(' ')
                 else:
                     ch, col = cell
@@ -252,6 +271,7 @@ class Engine:
                     syms = symbol_sets[sym_set]
                 else:
                     syms = self.cfg.get('symbols', ['#'])
+                self._master_dim = float(merged.get('master_dim', 1.0))
 
                 if self.frame % 10 == 0:
                     now = time.time()
@@ -304,17 +324,24 @@ class Engine:
                     prev_mode = self.mode
                     self._trans_frames = 6
 
-                self.modes[self.mode].render(self.buf_a, self.w, self.render_h, time.time() - self.t0, self.frame, merged, self.pal, syms)
-
-                if self.layer_b_enabled:
-                    self._clear_buf(self.buf_b)
-                    self.modes[self.mode_b].render(self.buf_b, self.w, self.render_h, time.time() - self.t0, self.frame, merged, self.pal, syms)
-                    self._composite_ab()
-                else:
-                    for y in range(self.render_h):
-                        self.buf[y][:] = self.buf_a[y][:]
+                # Reload mapping configs every 60 frames
+                if self.frame - self._map_reload_frame >= 60:
+                    self._mappings = load_mappings()
+                    self._map_reload_frame = self.frame
 
                 t_now = time.time() - self.t0
+                mapping = self._active_mapping()
+                if mapping and render_zones(self.buf, self.w, self.render_h, self.modes, self.mode, mapping, merged, self.pal, syms, t_now, self.frame):
+                    pass  # zones rendered directly into self.buf
+                else:
+                    self.modes[self.mode].render(self.buf_a, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
+                    if self.layer_b_enabled:
+                        self._clear_buf(self.buf_b)
+                        self.modes[self.mode_b].render(self.buf_b, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
+                        self._composite_ab()
+                    else:
+                        for y in range(self.render_h):
+                            self.buf[y][:] = self.buf_a[y][:]
                 bpm_val = float(merged.get('bpm', 140))
                 beat_phase = (t_now * bpm_val / 60.0) % 1.0
                 audio_peak = float(merged.get('audio_peak', 0.0) or 0.0)
@@ -342,7 +369,7 @@ class Engine:
 def _quit(sig, frame):
     sys.stdout.write(SHOW + RESET + CLEAR)
     sys.stdout.flush()
-    print('[ MOCT7 VISUAL ENGINE STOPPED ]')
+    print('[ ii VISUAL ENGINE STOPPED ]')
     sys.exit(0)
 
 

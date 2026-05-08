@@ -1,0 +1,10 @@
+{
+  "name": "QUAD",
+  "desc": "2×2 quad zones",
+  "zones": [
+    {"id": "TL", "x": 0.0, "y": 0.0,  "w": 0.5, "h": 0.5, "mode": null, "enabled": true},
+    {"id": "TR", "x": 0.5, "y": 0.0,  "w": 0.5, "h": 0.5, "mode": null, "enabled": true},
+    {"id": "BL", "x": 0.0, "y": 0.5,  "w": 0.5, "h": 0.5, "mode": null, "enabled": true},
+    {"id": "BR", "x": 0.5, "y": 0.5,  "w": 0.5, "h": 0.5, "mode": null, "enabled": true}
+  ]
+}

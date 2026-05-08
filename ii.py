@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
-"""MOCT 7 | ii — Node Engine"""
+"""ii — Node Engine"""
 
 import curses, json, locale, math, os, subprocess, sys, time, importlib.util
 
 from architecture import CONFIG_PATH, CTRL_PATH, DEFAULTS, NODES_PATH, STATUS_PATH, WINDOW_PATH, discover_mode_names, load_json, save_json_atomic
+from map_engine import load_mappings as _load_mappings
+from cues import CueList
+
+try:
+    from window import toggle_fullscreen as _toggle_fullscreen
+except Exception:
+    _toggle_fullscreen = None
+
+try:
+    from midi import get_router as _midi_get_router
+except Exception:
+    _midi_get_router = None
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -47,6 +59,7 @@ PARAM_META_ROWS = [
     ('rain_density',     'DENSITY     ', 0.1,  1.0, 'f2'),
     ('strobe_speed',     'STROBE      ', 1,    10,  'int'),
     ('bpm_sync',         'BPM SYNC    ', 0,    1,   'bool'),
+    ('master_dim',       'MASTER DIM  ', 0.0,  1.0, 'f2'),
     ('blackout',         'BLACKOUT    ', 0,    1,   'bool'),
     ('flash_active',     'FLASH       ', 0,    1,   'bool'),
     ('sym_set',          'SYMBOLS     ', 0,    5,   'sym_set'),
@@ -74,6 +87,7 @@ MAIN_CONTROLS = [
     ('auto_cycle',       'AUTO CYCLE  ', 0,    1,   'bool'),
     ('mode_cycle_frames','CYCLE FRMS  ', 50,   600, 'int'),
     ('frame_delay',      'SPEED       ', 0.01, 0.20,'f3'),
+    ('master_dim',       'MASTER DIM  ', 0.0,  1.0, 'f2'),
     ('blackout',         'BLACKOUT    ', 0,    1,   'bool'),
     ('flash_active',     'FLASH       ', 0,    1,   'bool'),
     ('sym_set',          'SYMBOLS     ', 0,    5,   'sym_set'),
@@ -192,6 +206,16 @@ class NodeEngine:
         self._visuals_launch_attempted = False
         self._mode_lock_forced_auto_cycle = False
         self._nmtime   = 0.0
+        self._mappings = _load_mappings()
+        self._map_idx  = int(load_json(CTRL_PATH, {}).get('mapping', 0))
+        self.cues      = CueList()
+        self.midi      = None
+        self.midi_values = {}
+        if _midi_get_router is not None:
+            try:
+                self.midi = _midi_get_router()
+            except Exception:
+                pass
         self._reload()
         self._init_colors()
 
@@ -271,9 +295,14 @@ class NodeEngine:
                         self.graph_err = str(e)[:80]
                         break
 
-            # Merge: DEFAULTS < node_state < manual overrides
+            # Pull MIDI values (non-blocking)
+            if self.midi:
+                self.midi_values = dict(self.midi.values)
+
+            # Merge: DEFAULTS < node_state < MIDI < manual overrides
             merged = dict(DEFAULTS)
             merged.update(node_state)
+            merged.update(self.midi_values)
             merged.update(self.overrides)
             if 'mode' in self.overrides:
                 merged['mode_lock'] = True
@@ -304,6 +333,8 @@ class NodeEngine:
             ov['layer_b_enabled'] = not ov.get('layer_b_enabled', self.state.get('layer_b_enabled', False))
         elif key in (ord('m'), ord('M')):
             self._toggle_mode_lock()
+        elif key in (ord('g'), ord('G')):
+            self._cycle_mapping()
         elif key in (ord('p'), ord('P')):
             ov['palette'] = (int(self.state.get('palette', 0)) + 1) % 6
         elif key in (ord('f'), ord('F')):
@@ -324,6 +355,17 @@ class NodeEngine:
             self._adjust_selected(-1)
         elif key == curses.KEY_RIGHT:
             self._adjust_selected(1)
+        elif key in (ord('w'), ord('W')):
+            if _toggle_fullscreen:
+                _toggle_fullscreen()
+        elif key == ord(','):
+            self.cues.prev()
+            self.overrides.update(self.cues.current_params())
+        elif key == ord('.'):
+            self.cues.advance()
+            self.overrides.update(self.cues.current_params())
+        elif key in (ord('z'), ord('Z')):
+            self._store_cue()
         elif key in (ord('c'), ord('C')):
             self._clear_selected_override()
         elif key in PRESETS:
@@ -350,6 +392,13 @@ class NodeEngine:
                 self._mode_lock_forced_auto_cycle = False
         else:
             self._set_manual_mode(self.state.get('mode', 0))
+
+    def _cycle_mapping(self):
+        self._mappings = _load_mappings()
+        if not self._mappings:
+            return
+        self._map_idx = (self._map_idx + 1) % len(self._mappings)
+        self.overrides['mapping'] = self._map_idx
 
     def _apply_preset(self, preset):
         self.overrides.update(preset)
@@ -548,6 +597,30 @@ class NodeEngine:
             self.scr.nodelay(True)
             self.scr.timeout(50)
 
+    def _store_cue(self):
+        h, w = self.scr.getmaxyx()
+        prompt = ' CUE NAME > '
+        default = self.cues.name()
+        curses.echo()
+        curses.curs_set(1)
+        self.scr.nodelay(False)
+        self.scr.timeout(-1)
+        try:
+            self.scr.move(max(0, h - 2), 0)
+            self.scr.clrtoeol()
+            self.scr.addstr(max(0, h - 2), 0, prompt + default)
+            self.scr.move(max(0, h - 2), min(w - 1, len(prompt)))
+            raw = self.scr.getstr(max(0, h - 2), len(prompt), max(1, w - len(prompt) - 1))
+            name = raw.decode(errors='ignore').strip() or default
+            self.cues.store(name, self.overrides)
+        except curses.error:
+            pass
+        finally:
+            curses.noecho()
+            curses.curs_set(0)
+            self.scr.nodelay(True)
+            self.scr.timeout(50)
+
     def _draw(self, t, node_state):
         scr = self.scr
         h, w = scr.getmaxyx()
@@ -592,7 +665,7 @@ class NodeEngine:
         sym_idx    = int(s.get('sym_set', 0)) % len(SYMBOL_SET_NAMES)
 
         # ── Row 0: header ────────────────────────────────────────
-        put(0, 1, 'MOCT 7  VJ DECK', R|BOLD)
+        put(0, 1, 'ii  VJ DECK', R|BOLD)
         if alive:
             put(0, 18, f'● {st.get("fps",0):.0f}fps', G)
         else:
@@ -632,6 +705,16 @@ class NodeEngine:
         if s.get('flash_active'): flags.append('FLASH')
         if s.get('blackout'):     flags.append('■ BLACKOUT')
         if n_ov:                  flags.append(f'OVR:{n_ov}')
+        if self._mappings:
+            midx = self._map_idx % len(self._mappings)
+            mname = self._mappings[midx].get('name', f'MAP{midx}')
+            if midx > 0 or mname not in ('DEFAULT', 'default', ''):
+                flags.append(f'MAP:{mname}')
+        midi = self.midi
+        if midi and midi.port_label:
+            flags.append(f'MIDI:{midi.port_label[:16]}')
+        elif midi and midi.error:
+            flags.append(f'MIDI:ERR')
         if self.graph_err:
             put(3, 1, f'NODE ERR: {self.graph_err[:w-12]}', R)
         else:
@@ -731,6 +814,22 @@ class NodeEngine:
         else:
             put(nr, right_x, 'No node controls in GRAPH', D)
 
+        # ── Cue panel (right column, below node panel) ───────────
+        cue_top = nr + 9
+        if cue_top < ctrl_bot - 2 and self.cues.cues:
+            put(cue_top, right_x, f'CUES  {self.cues.idx+1}/{len(self.cues.cues)}', N | BOLD)
+            visible = min(5, ctrl_bot - cue_top - 2)
+            start_c = max(0, self.cues.idx - visible // 2)
+            start_c = min(start_c, max(0, len(self.cues.cues) - visible))
+            for ci in range(visible):
+                qi = start_c + ci
+                if qi >= len(self.cues.cues):
+                    break
+                cname = self.cues.cues[qi].get('name', f'CUE{qi+1}')[:max(8, w - right_x - 4)]
+                marker = '>' if qi == self.cues.idx else ' '
+                attr = REV if qi == self.cues.idx else D
+                put(cue_top + 1 + ci, right_x, f'{marker}{qi+1:2d} {cname}', attr)
+
         # ── Mode matrix ──────────────────────────────────────────
         mat_div_y = h - 4 - n_mat
         div(mat_div_y)
@@ -751,7 +850,7 @@ class NodeEngine:
         # ── Footer ───────────────────────────────────────────────
         div(h - 3)
         put(h - 2, 1,
-            '[]mode  P pal  F font  T tap  X layer  M lock  A cycle  B black  ENTER text  TAB node  C clear  Q quit'[:w-2],
+            '[]mode  P pal  F font  T tap  X layer  M lock  G map  A cycle  B black  ENTER text  TAB node  C clear  W full  ,/. cue  Z store  Q quit'[:w-2],
             D)
 
         scr.refresh()

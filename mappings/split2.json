@@ -1,0 +1,8 @@
+{
+  "name": "2-SPLIT",
+  "desc": "Two vertical zones — left / right",
+  "zones": [
+    {"id": "LEFT",  "x": 0.0,  "y": 0.0, "w": 0.5, "h": 1.0, "mode": null, "enabled": true},
+    {"id": "RIGHT", "x": 0.5,  "y": 0.0, "w": 0.5, "h": 1.0, "mode": null, "enabled": true}
+  ]
+}

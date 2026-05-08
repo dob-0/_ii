@@ -1,0 +1,9 @@
+{
+  "name": "3-CUBE",
+  "desc": "Three vertical zones — left / center / right cube surfaces (from FINAL.xml)",
+  "zones": [
+    {"id": "CUBE-L", "x": 0.00,  "y": 0.0, "w": 0.333, "h": 1.0, "mode": null, "enabled": true},
+    {"id": "CUBE-C", "x": 0.333, "y": 0.0, "w": 0.334, "h": 1.0, "mode": null, "enabled": true},
+    {"id": "CUBE-R", "x": 0.667, "y": 0.0, "w": 0.333, "h": 1.0, "mode": null, "enabled": true}
+  ]
+}
