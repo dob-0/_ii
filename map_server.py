@@ -176,56 +176,83 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 .alpha-row input[type=range]{width:100%;accent-color:var(--accent2)}
 
 /* ── OUTPUTS TAB ─────────────────────────────────────────────────────────── */
-#tab-outputs{flex-direction:column;overflow:hidden;background:var(--bg)}
-#tab-outputs.active{display:flex}
-#out-strip{display:flex;align-items:center;gap:10px;padding:7px 14px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;font-size:10px;letter-spacing:1px}
-#out-x-badge{color:#555}
+#tab-outputs.active{display:flex;flex-direction:column;background:var(--bg)}
+/* top bar */
+#out-topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0}
+#out-x-badge{font:10px/1 monospace;letter-spacing:1px;color:#555}
 #out-x-badge.ok{color:var(--accent3)}
 #out-x-badge.warn{color:var(--accent2)}
-#out-strip-status{margin-left:auto;color:#555;font-size:10px}
-#out-main{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-width:1100px;width:100%}
-.out-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:12px 14px}
-.out-section-hdr{font-size:9px;letter-spacing:2px;color:var(--text4);margin-bottom:10px;display:flex;align-items:center;gap:10px}
-.out-auto-btn{font-size:9px;letter-spacing:1px;padding:2px 8px;background:transparent;border:1px solid #1c3a1c;color:#3d6a3d;cursor:pointer;font-family:monospace}
-.out-auto-btn:hover{color:#55cc55;border-color:#2a5a2a}
-#out-assign-area{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.out-role-label{font-size:9px;letter-spacing:2px;color:var(--text4);margin-bottom:6px}
-.out-disp-btns{display:flex;flex-direction:column;gap:5px}
-.out-disp-btn{background:#111;border:1px solid #222;border-radius:3px;padding:8px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s;display:flex;flex-direction:column;gap:2px}
-.out-disp-btn:hover{border-color:#444}
-.out-disp-btn.active{border-color:var(--accent3);background:#0a1a0a}
-.out-disp-btn .dname{font-size:11px;color:var(--text)}
-.out-disp-btn.active .dname{color:var(--accent3)}
-.out-disp-btn .dres{color:#555;font-size:9px}
-#out-map-btns{display:flex;flex-wrap:wrap;gap:6px}
-.out-map-btn{background:#111;border:1px solid #222;border-radius:3px;padding:8px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s}
-.out-map-btn:hover{border-color:#444}
-.out-map-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
-.msurfs{font-size:9px;color:#555;margin-top:2px}
-.out-map-btn.active .msurfs{color:#3a6}
-/* source cards */
-#out-sources-area{display:flex;flex-wrap:wrap;gap:8px}
-.src-card{background:#111;border:1px solid #1e1e1e;border-radius:3px;padding:10px 12px;min-width:140px;flex:1;max-width:260px;display:flex;flex-direction:column;gap:7px}
-.src-card-id{font-size:9px;letter-spacing:2px;color:#555}
-.src-type-row{display:flex;gap:4px}
-.src-type-btn{font-size:9px;letter-spacing:1px;padding:3px 8px;border:1px solid #222;background:#0a0a0a;color:#555;cursor:pointer;font-family:monospace;flex:1}
-.src-type-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
-.src-mode-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
-.src-mp-btn{font-size:8px;padding:3px 1px;border:1px solid #1a1a1a;background:#0a0a0a;color:#555;cursor:pointer;font-family:monospace;text-align:center;overflow:hidden}
-.src-mp-btn:hover{color:var(--text);border-color:#333}
-.src-mp-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
-.src-video-sel{width:100%;font-size:10px;background:#0a0a0a;border:1px solid #1e1e1e;color:var(--text);padding:4px 4px}
+#out-topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+#out-apply-btn{padding:8px 24px;font:10px/1 monospace;letter-spacing:2px;border:1px solid #1c4a1c;color:var(--accent3);background:#071207;cursor:pointer}
+#out-apply-btn:hover{background:#0a1f0a;border-color:#2a6a2a}
+#out-layout-status{font:10px/1 monospace;color:#555}
+/* body: sidebar + main */
+#out-body{flex:1;display:flex;overflow:hidden}
+/* ── sidebar ── */
+#out-sidebar{width:240px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:#080808}
+.out-sb-section{padding:14px 14px 10px;border-bottom:1px solid #111}
+.out-sb-label{font:9px/1 monospace;letter-spacing:2px;color:#333;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.out-sb-label button{font:9px/1 monospace;letter-spacing:1px;padding:1px 6px;background:transparent;border:1px solid #1c3a1c;color:#2a5a2a;cursor:pointer}
+.out-sb-label button:hover{color:#44aa44;border-color:#2a6a2a}
+/* display rows */
+.out-disp-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.out-disp-role{font:9px/1 monospace;letter-spacing:1px;color:#444;width:28px;flex-shrink:0}
+.out-disp-sel{flex:1;font:10px/1 monospace;background:#0e0e0e;border:1px solid #1a1a1a;color:var(--text);padding:5px 6px;cursor:pointer}
+.out-disp-sel.active-ok{border-color:#1a3a1a;color:var(--accent3)}
+/* mapping list */
+.out-map-item{display:flex;align-items:center;gap:0;margin-bottom:4px;cursor:pointer;border:1px solid transparent;padding:6px 8px;border-radius:2px}
+.out-map-item:hover{background:#0d0d0d}
+.out-map-item.active{background:#0a140a;border-color:#1a3a1a}
+.out-map-item-name{font:11px/1 monospace;color:#888;flex:1}
+.out-map-item.active .out-map-item-name{color:var(--accent3)}
+.out-map-item-n{font:9px/1 monospace;color:#333}
+.out-map-item.active .out-map-item-n{color:#3a7a3a}
 /* project */
-#out-proj-area{display:flex;flex-direction:column;gap:8px}
-.proj-row{display:flex;gap:8px;align-items:center}
-.proj-row input,.proj-row select{flex:1;background:#111;border:1px solid #222;color:var(--text);font:11px/1 monospace;padding:5px 8px}
-.proj-btn{font:10px/1 monospace;letter-spacing:1px;padding:5px 12px;background:transparent;border:1px solid #1c3a1c;color:#3d8a3d;cursor:pointer;white-space:nowrap}
-.proj-btn:hover{color:#55cc55;border-color:#2a5a2a}
-#out-action-area{display:flex;align-items:center;gap:14px;padding-top:2px}
-#out-apply-btn{padding:11px 28px;font-size:11px;letter-spacing:2px;border:1px solid #153a15;color:var(--green);background:var(--bg1);border-radius:3px;cursor:pointer;font-family:monospace;flex-shrink:0}
-#out-apply-btn:hover{background:#0a1a0a;border-color:#2a5a2a}
-#out-layout-status{font-size:10px;color:#555}
+.out-proj-input{width:100%;box-sizing:border-box;background:#0e0e0e;border:1px solid #1a1a1a;color:var(--text);font:11px/1 monospace;padding:6px 8px;margin-bottom:6px}
+.out-proj-row{display:flex;gap:6px;margin-bottom:6px}
+.out-proj-sel{flex:1;font:10px/1 monospace;background:#0e0e0e;border:1px solid #1a1a1a;color:var(--text);padding:5px 6px}
+.out-proj-btn{font:9px/1 monospace;letter-spacing:1px;padding:5px 10px;background:transparent;border:1px solid #1c3a1c;color:#3a7a3a;cursor:pointer;white-space:nowrap}
+.out-proj-btn:hover{color:#55cc55;border-color:#2a6a2a}
+#proj-status{font:10px/1.4 monospace;color:#555;min-height:14px}
+/* ── main surface area ── */
+#out-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#out-main-hdr{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #111;flex-shrink:0}
+#out-main-hdr-title{font:9px/1 monospace;letter-spacing:2px;color:#333;flex:1}
+#out-surfaces{flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;align-content:start}
+/* surface layer card */
+.lyr-card{background:#0c0c0c;border:1px solid #1a1a1a;display:flex;flex-direction:column;cursor:default;transition:border-color .15s}
+.lyr-card:hover{border-color:#2a2a2a}
+.lyr-card.selected{border-color:#1a3a1a}
+.lyr-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #111}
+.lyr-id{font:10px/1 monospace;letter-spacing:1px;color:#555;flex:1}
+.lyr-card.selected .lyr-id{color:var(--accent3)}
+.lyr-toggle{display:flex}
+.lyr-tog-btn{font:8px/1 monospace;letter-spacing:1px;padding:3px 7px;border:1px solid #1e1e1e;background:transparent;color:#333;cursor:pointer}
+.lyr-tog-btn:first-child{border-radius:2px 0 0 2px}
+.lyr-tog-btn:last-child{border-radius:0 2px 2px 0;border-left:none}
+.lyr-tog-btn.on{background:#0a1a0a;border-color:#2a5a2a;color:var(--accent3)}
+/* source display (big label) */
+.lyr-src-display{padding:14px 12px;flex:1;display:flex;flex-direction:column;gap:4px}
+.lyr-src-name{font:15px/1 monospace;color:#ccc;letter-spacing:1px}
+.lyr-src-sub{font:9px/1 monospace;color:#333;letter-spacing:1px;text-transform:uppercase}
+/* picker area */
+.lyr-picker{border-top:1px solid #111;padding:8px}
+/* mode grid inside card */
+.lyr-mode-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.lyr-mg-btn{font:9px/1 monospace;padding:5px 2px;border:1px solid #161616;background:#080808;color:#444;cursor:pointer;text-align:center}
+.lyr-mg-btn:hover{color:#aaa;border-color:#2a2a2a}
+.lyr-mg-btn.on{background:#081a08;border-color:#1c4a1c;color:var(--accent3)}
+/* video list */
+.lyr-vid-list{display:flex;flex-direction:column;gap:3px;max-height:120px;overflow-y:auto}
+.lyr-vid-item{font:10px/1 monospace;padding:5px 7px;border:1px solid #161616;background:#080808;color:#555;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lyr-vid-item:hover{color:#aaa;border-color:#2a2a2a}
+.lyr-vid-item.on{background:#081a08;border-color:#1c4a1c;color:var(--accent3)}
+.lyr-vid-empty{font:10px/1 monospace;color:#252525;padding:4px 2px}
+/* empty state */
+#out-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#1e1e1e;font:11px/1 monospace;letter-spacing:2px}
 .out-warn{color:var(--accent2)!important}
+/* strip-status alias kept for restartXLayout compat */
+#out-strip-status{display:none}
 
 /* ── HELP TAB ────────────────────────────────────────────────────────────── */
 #tab-help{flex-direction:column;overflow-y:auto;background:var(--bg);padding:16px}
@@ -1150,44 +1177,55 @@ async function zonesSave(){
      OUTPUTS TAB
      ════════════════════════════════════════ -->
 <div id="tab-outputs">
-  <div id="out-strip">
+  <!-- top bar: status + apply -->
+  <div id="out-topbar">
     <span id="out-x-badge">X11 ●</span>
     <button class="cbtn" onclick="restartXLayout()" style="width:auto;padding:3px 10px;margin-top:0;font-size:9px;letter-spacing:1px">RESTART X</button>
     <span id="out-strip-status"></span>
-  </div>
-  <div id="out-main">
-    <div class="out-section">
-      <div class="out-section-hdr">DISPLAYS <button class="out-auto-btn" onclick="autoAssignDisplays()">AUTO-DETECT</button></div>
-      <div id="out-assign-area">
-        <div><div class="out-role-label">CONTROLLER</div><div id="out-ctrl-btns" class="out-disp-btns"></div></div>
-        <div><div class="out-role-label">PROJECTOR</div><div id="out-vis-btns" class="out-disp-btns"></div></div>
-      </div>
-    </div>
-    <div class="out-section">
-      <div class="out-section-hdr">MAPPING</div>
-      <div id="out-map-btns"></div>
-    </div>
-    <div class="out-section">
-      <div class="out-section-hdr">SOURCES</div>
-      <div id="out-sources-area"><div style="color:#333;font-size:10px;padding:4px">select a mapping to see surfaces</div></div>
-    </div>
-    <div class="out-section">
-      <div class="out-section-hdr">PROJECT</div>
-      <div id="out-proj-area">
-        <div class="proj-row">
-          <input id="proj-name" type="text" placeholder="project name…" autocomplete="off">
-          <button class="proj-btn" onclick="saveProject()">SAVE</button>
-        </div>
-        <div class="proj-row">
-          <select id="proj-load-sel"><option value="">— load project —</option></select>
-          <button class="proj-btn" onclick="loadProject()">LOAD</button>
-        </div>
-        <div id="proj-status" style="font-size:10px;color:#555;min-height:14px"></div>
-      </div>
-    </div>
-    <div id="out-action-area">
-      <button id="out-apply-btn" onclick="applyOutputPlan()">APPLY TO STAGE</button>
+    <div id="out-topbar-right">
       <span id="out-layout-status"></span>
+      <button id="out-apply-btn" onclick="applyOutputPlan()">APPLY TO STAGE</button>
+    </div>
+  </div>
+  <!-- body -->
+  <div id="out-body">
+    <!-- sidebar -->
+    <div id="out-sidebar">
+      <!-- project -->
+      <div class="out-sb-section">
+        <div class="out-sb-label">PROJECT</div>
+        <input id="proj-name" class="out-proj-input" type="text" placeholder="project name…" autocomplete="off">
+        <div class="out-proj-row">
+          <select id="proj-load-sel" class="out-proj-sel"><option value="">load…</option></select>
+          <button class="out-proj-btn" onclick="loadProject()">LOAD</button>
+          <button class="out-proj-btn" onclick="saveProject()">SAVE</button>
+        </div>
+        <div id="proj-status"></div>
+      </div>
+      <!-- displays -->
+      <div class="out-sb-section">
+        <div class="out-sb-label">DISPLAYS <button onclick="autoAssignDisplays()">AUTO</button></div>
+        <div class="out-disp-row">
+          <span class="out-disp-role">CTRL</span>
+          <select id="out-ctrl-sel" class="out-disp-sel" onchange="selCtrl=this.value;checkSameDisp()"></select>
+        </div>
+        <div class="out-disp-row">
+          <span class="out-disp-role">VIS</span>
+          <select id="out-vis-sel" class="out-disp-sel" onchange="selVis=this.value;checkSameDisp()"></select>
+        </div>
+      </div>
+      <!-- mapping -->
+      <div class="out-sb-section">
+        <div class="out-sb-label">MAPPING</div>
+        <div id="out-map-list"></div>
+      </div>
+    </div>
+    <!-- main: surface layer cards -->
+    <div id="out-main">
+      <div id="out-main-hdr">
+        <span id="out-main-hdr-title">SURFACES</span>
+      </div>
+      <div id="out-surfaces"><div id="out-empty">select a mapping</div></div>
     </div>
   </div>
 </div>
@@ -1275,34 +1313,32 @@ ii stop</div>
 </div>
 
 <script>
-let outputsTimer=null;
-let outputApplyBusy=false;
+let outputsTimer=null, outputApplyBusy=false;
 let selCtrl='', selVis='', selMapping=0, _outInited=false;
 let _lastOutState=null, _currentMappings=[], _currentMappingFile='';
-let _outModes=[], _surfSources={};
+let _outModes=[];
 
 async function outputsLoad(){
-  const [modesR]=await Promise.all([fetch('/api/modes')]);
-  _outModes=await modesR.json().catch(()=>[]);
-  await refreshOutputs();
-  await _refreshProjects();
+  if(!_outModes.length){
+    _outModes=await fetch('/api/modes').then(r=>r.json()).catch(()=>[]);
+  }
+  await Promise.all([refreshOutputs(), fetchMedia(), _refreshProjects()]);
   clearInterval(outputsTimer);
-  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},4000);
+  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},5000);
 }
 
 async function refreshOutputs(){
   try{
-    const r=await fetch('/api/output-setup');
-    const d=await r.json();
+    const d=await fetch('/api/output-setup').then(r=>r.json());
     _lastOutState=d;
-    renderOutputs(d);
+    _renderOutputs(d);
   }catch(e){
     const b=document.getElementById('out-x-badge');
     if(b){b.textContent='X11 ✕';b.className='warn';}
   }
 }
 
-function renderOutputs(d){
+function _renderOutputs(d){
   const badge=document.getElementById('out-x-badge');
   if(badge){badge.textContent=d.x_running?'X11 ●':'X11 ✕';badge.className=d.x_running?'ok':'warn';}
   const displays=(d.displays||[]).filter(x=>x.connected);
@@ -1313,178 +1349,215 @@ function renderOutputs(d){
     selVis=d.assign?.vis||d.suggested_vis||displays[1]?.name||displays[0]?.name||'';
     selMapping=d.active_mapping??0;
   }
-  buildDispButtons('out-ctrl-btns',displays,selCtrl,n=>{selCtrl=n;checkSameDisp();});
-  buildDispButtons('out-vis-btns',displays,selVis,n=>{selVis=n;checkSameDisp();});
+  _buildDispSel('out-ctrl-sel',displays,selCtrl,n=>{selCtrl=n;checkSameDisp();});
+  _buildDispSel('out-vis-sel',displays,selVis,n=>{selVis=n;checkSameDisp();});
   _currentMappingFile=d.active_mapping_file||'';
-  buildMapButtons(_currentMappings,selMapping);
-  renderSourceCards(d.surfaces||[],_currentMappingFile);
+  _buildMapList(_currentMappings,selMapping);
+  _buildSurfaces(d.surfaces||[],_currentMappingFile);
+  const mname=_currentMappings[selMapping]?.name||_currentMappingFile||'—';
+  const el=document.getElementById('out-main-hdr-title');
+  if(el)el.textContent='SOURCES  ·  '+mname;
+  checkSameDisp();
+}
+
+function _buildDispSel(id,displays,selected,onChange){
+  const sel=document.getElementById(id);
+  if(!sel)return;
+  const cur=sel.value||selected;
+  sel.innerHTML='';
+  if(!displays.length){
+    const o=document.createElement('option');o.textContent='no display';sel.appendChild(o);return;
+  }
+  displays.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.name;o.textContent=d.name+'  '+(d.resolution||'');o.selected=(d.name===cur);
+    sel.appendChild(o);
+  });
+  if(cur&&!sel.value){sel.value=displays[0].name;}
+  sel.onchange=()=>onChange(sel.value);
+}
+
+function autoAssignDisplays(){
+  if(!_lastOutState)return;
+  const sc=_lastOutState.suggested_ctrl,sv=_lastOutState.suggested_vis;
+  if(sc){selCtrl=sc;const s=document.getElementById('out-ctrl-sel');if(s)s.value=sc;}
+  if(sv){selVis=sv;const s=document.getElementById('out-vis-sel');if(s)s.value=sv;}
   checkSameDisp();
 }
 
 function checkSameDisp(){
   const s=document.getElementById('out-layout-status');
   if(!s)return;
-  if(selCtrl&&selCtrl===selVis){s.textContent='⚠ same display for both';s.className='out-warn';}
-  else if(s.className==='out-warn'){s.textContent='';s.className='';}
+  if(selCtrl&&selCtrl===selVis){s.textContent='⚠ same display';s.className='out-warn';}
+  else{s.textContent='';s.className='';}
 }
 
-function buildDispButtons(id,displays,selected,onSelect){
-  const box=document.getElementById(id);
+function _buildMapList(mappings,activeIdx){
+  const box=document.getElementById('out-map-list');
   if(!box)return;
   box.innerHTML='';
-  if(!displays.length){box.innerHTML='<div style="color:#555;font-size:10px;padding:6px">no displays detected</div>';return;}
-  displays.forEach(d=>{
-    const btn=document.createElement('button');
-    btn.className='out-disp-btn'+(d.name===selected?' active':'');
-    btn.innerHTML=`<span class="dname">${d.name}</span><span class="dres">${d.resolution||'—'}</span>`;
-    btn.onclick=()=>{onSelect(d.name);box.querySelectorAll('.out-disp-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');};
-    box.appendChild(btn);
-  });
-}
-
-function autoAssignDisplays(){
-  if(!_lastOutState)return;
-  const sc=_lastOutState.suggested_ctrl, sv=_lastOutState.suggested_vis;
-  if(sc){selCtrl=sc;}
-  if(sv){selVis=sv;}
-  const displays=(_lastOutState.displays||[]).filter(d=>d.connected);
-  buildDispButtons('out-ctrl-btns',displays,selCtrl,n=>{selCtrl=n;checkSameDisp();});
-  buildDispButtons('out-vis-btns',displays,selVis,n=>{selVis=n;checkSameDisp();});
-  checkSameDisp();
-}
-
-function buildMapButtons(mappings,activeIdx){
-  const box=document.getElementById('out-map-btns');
-  if(!box)return;
-  box.innerHTML='';
-  if(!mappings.length){box.innerHTML='<div style="color:#555;font-size:10px;padding:6px">no mapping files</div>';return;}
+  if(!mappings.length){box.innerHTML='<div style="color:#252525;font-size:10px;padding:4px">no mappings</div>';return;}
   mappings.forEach((m,i)=>{
-    const btn=document.createElement('button');
-    btn.className='out-map-btn'+(i===activeIdx?' active':'');
-    const n=m.surfaces||0;
-    btn.innerHTML=`${m.name||m.file}<div class="msurfs">${n} surface${n!==1?'s':''}</div>`;
-    btn.onclick=async()=>{
-      selMapping=i;
-      _currentMappingFile=m.file;
-      box.querySelectorAll('.out-map-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+    const row=document.createElement('div');
+    row.className='out-map-item'+(i===activeIdx?' active':'');
+    row.innerHTML='<span class="out-map-item-name">'+(m.name||m.file)+'</span><span class="out-map-item-n">'+(m.surfaces||0)+'</span>';
+    row.onclick=async()=>{
+      selMapping=i;_currentMappingFile=m.file;
+      box.querySelectorAll('.out-map-item').forEach(r=>r.classList.remove('active'));
+      row.classList.add('active');
       await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:i})}).catch(()=>{});
       await refreshOutputs();
     };
-    box.appendChild(btn);
+    box.appendChild(row);
   });
 }
 
-function renderSourceCards(surfaces, mappingFile){
-  const area=document.getElementById('out-sources-area');
-  if(!area)return;
+function _buildSurfaces(surfaces, mappingFile){
+  const grid=document.getElementById('out-surfaces');
+  if(!grid)return;
   if(!surfaces||!surfaces.length){
-    area.innerHTML='<div style="color:#333;font-size:10px;padding:4px">no surfaces in this mapping</div>';
-    return;
+    grid.innerHTML='<div id="out-empty">select a mapping</div>';return;
   }
-  area.innerHTML='';
+  grid.innerHTML='';
   surfaces.forEach(s=>{
     const id=s.id||'?';
-    const curMode=(s.mode!==null&&s.mode!==undefined)?parseInt(s.mode):null;
+    const curMode=(s.mode!=null)?parseInt(s.mode):null;
     const curVideo=s.video||'';
     const isVid=!!curVideo;
 
     const card=document.createElement('div');
-    card.className='src-card';
+    card.className='lyr-card';
     card.dataset.id=id;
 
-    const hdr=document.createElement('div');
-    hdr.className='src-card-id';
-    hdr.textContent=id;
-    card.appendChild(hdr);
+    const head=document.createElement('div');
+    head.className='lyr-head';
+    const idEl=document.createElement('span');
+    idEl.className='lyr-id';idEl.textContent=id;
+    const tog=document.createElement('div');
+    tog.className='lyr-toggle';
+    const modeTog=document.createElement('button');
+    modeTog.className='lyr-tog-btn'+(!isVid?' on':'');
+    modeTog.textContent='MODE';
+    const vidTog=document.createElement('button');
+    vidTog.className='lyr-tog-btn'+(isVid?' on':'');
+    vidTog.textContent='VIDEO';
+    tog.append(modeTog,vidTog);
+    head.append(idEl,tog);
+    card.appendChild(head);
 
-    const typeRow=document.createElement('div');
-    typeRow.className='src-type-row';
-    const modeBtn=document.createElement('button');
-    modeBtn.className='src-type-btn'+(!isVid?' active':'');
-    modeBtn.textContent='MODE';
-    const vidBtn=document.createElement('button');
-    vidBtn.className='src-type-btn'+(isVid?' active':'');
-    vidBtn.textContent='VIDEO';
-    typeRow.append(modeBtn,vidBtn);
-    card.appendChild(typeRow);
+    const srcDisp=document.createElement('div');
+    srcDisp.className='lyr-src-display';
+    const srcName=document.createElement('div');
+    srcName.className='lyr-src-name';
+    const srcSub=document.createElement('div');
+    srcSub.className='lyr-src-sub';
+    if(isVid){
+      srcName.textContent=curVideo.split('/').pop()||'—';
+      srcSub.textContent='video';
+    } else if(curMode!=null&&_outModes[curMode]){
+      srcName.textContent=_outModes[curMode];
+      srcSub.textContent='mode '+curMode;
+    } else {
+      srcName.textContent='visuals';
+      srcSub.textContent='default';
+    }
+    srcDisp.append(srcName,srcSub);
+    card.appendChild(srcDisp);
 
-    // mode grid
-    const modePicker=document.createElement('div');
-    modePicker.className='src-mode-picker';
-    modePicker.style.display=isVid?'none':'';
-    (_outModes).forEach((m,i)=>{
+    const picker=document.createElement('div');
+    picker.className='lyr-picker';
+
+    const modeGrid=document.createElement('div');
+    modeGrid.className='lyr-mode-grid';
+    modeGrid.style.display=isVid?'none':'';
+    _outModes.forEach((m,i)=>{
       const b=document.createElement('button');
-      b.className='src-mp-btn'+(curMode===i?' active':'');
-      b.textContent=m.length>5?m.slice(0,5):m;
-      b.title=m;
-      b.dataset.idx=i;
+      b.className='lyr-mg-btn'+(curMode===i?' on':'');
+      b.textContent=m;b.dataset.idx=i;
       b.onclick=()=>{
-        _surfSources[id]={type:'mode',mode:i,video:''};
         setSurfaceSource(mappingFile,id,'mode',i,'');
-        modePicker.querySelectorAll('.src-mp-btn').forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');
+        srcName.textContent=m;srcSub.textContent='mode '+i;
+        modeGrid.querySelectorAll('.lyr-mg-btn').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
       };
-      modePicker.appendChild(b);
+      modeGrid.appendChild(b);
     });
-    card.appendChild(modePicker);
+    picker.appendChild(modeGrid);
 
-    // video dropdown
-    const videoSel=document.createElement('select');
-    videoSel.className='src-video-sel';
-    videoSel.style.display=isVid?'':'none';
-    const emptyOpt=document.createElement('option');
-    emptyOpt.value='';emptyOpt.textContent='— none (use visuals) —';
-    videoSel.appendChild(emptyOpt);
-    (MEDIA_FILES||[]).filter(_isVideoFile).forEach(f=>{
-      const opt=document.createElement('option');
-      opt.value=f;opt.textContent=f;opt.selected=(f===curVideo);
-      videoSel.appendChild(opt);
-    });
-    videoSel.onchange=()=>{
-      const v=videoSel.value;
-      _surfSources[id]={type:'video',mode:null,video:v};
-      setSurfaceSource(mappingFile,id,'video',null,v);
+    const vidList=document.createElement('div');
+    vidList.className='lyr-vid-list';
+    vidList.style.display=isVid?'':'none';
+    const vids=(MEDIA_FILES||[]).filter(_isVideoFile);
+    const noneItem=document.createElement('button');
+    noneItem.className='lyr-vid-item'+(!curVideo?' on':'');
+    noneItem.textContent='— default visuals —';
+    noneItem.onclick=()=>{
+      setSurfaceSource(mappingFile,id,'mode',curMode??0,'');
+      srcName.textContent=curMode!=null&&_outModes[curMode]?_outModes[curMode]:'visuals';
+      srcSub.textContent=curMode!=null?'mode '+curMode:'default';
+      vidList.querySelectorAll('.lyr-vid-item').forEach(x=>x.classList.remove('on'));
+      noneItem.classList.add('on');
     };
-    card.appendChild(videoSel);
+    vidList.appendChild(noneItem);
+    if(!vids.length){
+      const e=document.createElement('div');e.className='lyr-vid-empty';e.textContent='no video files in media/';vidList.appendChild(e);
+    }
+    vids.forEach(f=>{
+      const item=document.createElement('button');
+      item.className='lyr-vid-item'+(f===curVideo?' on':'');
+      item.textContent=f;
+      item.onclick=()=>{
+        setSurfaceSource(mappingFile,id,'video',null,f);
+        srcName.textContent=f.split('/').pop();srcSub.textContent='video';
+        vidList.querySelectorAll('.lyr-vid-item').forEach(x=>x.classList.remove('on'));
+        item.classList.add('on');
+      };
+      vidList.appendChild(item);
+    });
+    picker.appendChild(vidList);
+    card.appendChild(picker);
 
-    modeBtn.onclick=()=>{
-      modeBtn.classList.add('active');vidBtn.classList.remove('active');
-      modePicker.style.display='';videoSel.style.display='none';
-      const activeM=modePicker.querySelector('.src-mp-btn.active');
-      const mi=activeM?parseInt(activeM.dataset.idx):0;
-      _surfSources[id]={type:'mode',mode:mi,video:''};
+    modeTog.onclick=()=>{
+      modeTog.classList.add('on');vidTog.classList.remove('on');
+      modeGrid.style.display='';vidList.style.display='none';
+      const ab=modeGrid.querySelector('.lyr-mg-btn.on');
+      const mi=ab?parseInt(ab.dataset.idx):0;
       setSurfaceSource(mappingFile,id,'mode',mi,'');
+      if(_outModes[mi]){srcName.textContent=_outModes[mi];srcSub.textContent='mode '+mi;}
     };
-    vidBtn.onclick=()=>{
-      vidBtn.classList.add('active');modeBtn.classList.remove('active');
-      videoSel.style.display='';modePicker.style.display='none';
-      const v=videoSel.value;
-      _surfSources[id]={type:'video',mode:null,video:v};
-      setSurfaceSource(mappingFile,id,'video',null,v);
+    vidTog.onclick=()=>{
+      vidTog.classList.add('on');modeTog.classList.remove('on');
+      vidList.style.display='';modeGrid.style.display='none';
+      const ab=vidList.querySelector('.lyr-vid-item.on');
+      const v=(ab&&ab.textContent!=='— default visuals —')?ab.textContent:'';
+      if(v){setSurfaceSource(mappingFile,id,'video',null,v);srcName.textContent=v;srcSub.textContent='video';}
     };
 
-    area.appendChild(card);
+    grid.appendChild(card);
   });
 }
 
 async function setSurfaceSource(file,id,type,mode,video){
   try{
-    await fetch('/api/surface-source',{method:'POST',
-      headers:{'Content-Type':'application/json'},
+    await fetch('/api/surface-source',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({file,id,type,mode,video})});
   }catch(e){}
 }
 
 async function applyOutputPlan(){
   if(outputApplyBusy)return;
+  const ctrlSel=document.getElementById('out-ctrl-sel');
+  const visSel=document.getElementById('out-vis-sel');
+  if(ctrlSel)selCtrl=ctrlSel.value;
+  if(visSel)selVis=visSel.value;
   const st=document.getElementById('out-layout-status');
-  if(!selCtrl||!selVis){if(st){st.textContent='select controller and projector first';st.className='';}return;}
-  if(selCtrl===selVis&&!confirm('Controller and projector are the same display. Apply anyway?'))return;
+  if(!selCtrl||!selVis){if(st){st.textContent='select displays first';st.className='';}return;}
+  if(selCtrl===selVis&&!confirm('Same display for both — apply anyway?'))return;
   outputApplyBusy=true;
   if(st){st.textContent='applying…';st.className='';}
   try{
-    const r=await fetch('/api/output-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ctrl:selCtrl,vis:selVis,mapping:selMapping,blackout:true})});
+    const r=await fetch('/api/output-setup',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ctrl:selCtrl,vis:selVis,mapping:selMapping,blackout:true})});
     const d=await r.json();
     if(st)st.textContent=d.msg||'applied ✓';
   }catch(e){
@@ -1495,33 +1568,34 @@ async function applyOutputPlan(){
 
 async function restartXLayout(){
   if(!confirm('Restart the X show layout? The display may blink.'))return;
-  const st=document.getElementById('out-strip-status');
-  if(st)st.textContent='restarting X…';
   try{
     const r=await fetch('/api/display-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:'restart-x'})});
     const d=await r.json();
+    const st=document.getElementById('out-layout-status');
     if(st){st.textContent=d.msg||'restart requested';setTimeout(()=>{st.textContent='';},4000);}
-  }catch(e){if(st)st.textContent='error: '+e;}
+  }catch(e){}
 }
 
 // ── PROJECT SAVE / LOAD ───────────────────────────────────────────────────────
 async function saveProject(){
   const name=document.getElementById('proj-name').value.trim();
-  if(!name){_projStatus('enter a project name');return;}
+  if(!name){_projStatus('enter a name');return;}
   const sources={};
-  document.querySelectorAll('.src-card').forEach(card=>{
+  document.querySelectorAll('.lyr-card').forEach(card=>{
     const id=card.dataset.id;
-    const isVid=card.querySelector('.src-type-btn:last-child').classList.contains('active');
+    const isVid=card.querySelector('.lyr-tog-btn:last-child').classList.contains('on');
     if(isVid){
-      sources[id]={type:'video',video:card.querySelector('.src-video-sel').value};
+      const ab=card.querySelector('.lyr-vid-item.on');
+      const v=(ab&&ab.textContent!=='— default visuals —')?ab.textContent:'';
+      sources[id]={type:'video',video:v};
     } else {
-      const ab=card.querySelector('.src-mp-btn.active');
+      const ab=card.querySelector('.lyr-mg-btn.on');
       sources[id]={type:'mode',mode:ab?parseInt(ab.dataset.idx):null};
     }
   });
-  const body={name,display_ctrl:selCtrl,display_vis:selVis,mapping:_currentMappingFile,sources};
   try{
-    const r=await fetch('/api/project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch('/api/project',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,display_ctrl:selCtrl,display_vis:selVis,mapping:_currentMappingFile,sources})});
     const d=await r.json();
     _projStatus(d.msg||'saved');
     await _refreshProjects(name);
@@ -1532,11 +1606,10 @@ async function loadProject(){
   const name=document.getElementById('proj-load-sel').value;
   if(!name){_projStatus('select a project');return;}
   try{
-    const r=await fetch('/api/project?name='+encodeURIComponent(name));
-    const proj=await r.json();
+    const proj=await fetch('/api/project?name='+encodeURIComponent(name)).then(r=>r.json());
     if(!proj||proj.error){_projStatus('not found');return;}
-    if(proj.display_ctrl)selCtrl=proj.display_ctrl;
-    if(proj.display_vis)selVis=proj.display_vis;
+    if(proj.display_ctrl){selCtrl=proj.display_ctrl;const s=document.getElementById('out-ctrl-sel');if(s)s.value=selCtrl;}
+    if(proj.display_vis){selVis=proj.display_vis;const s=document.getElementById('out-vis-sel');if(s)s.value=selVis;}
     if(proj.mapping){
       const idx=_currentMappings.findIndex(m=>m.file===proj.mapping);
       if(idx>=0){
@@ -1550,23 +1623,20 @@ async function loadProject(){
       }
     }
     document.getElementById('proj-name').value=proj.name||name;
-    _outInited=false;
-    _projStatus('loaded: '+(proj.name||name));
+    _outInited=false;_projStatus('loaded: '+(proj.name||name));
     await refreshOutputs();
   }catch(e){_projStatus('error: '+e);}
 }
 
 async function _refreshProjects(selectName){
   try{
-    const r=await fetch('/api/projects');
-    const names=await r.json();
+    const names=await fetch('/api/projects').then(r=>r.json());
     const sel=document.getElementById('proj-load-sel');
     const cur=selectName||sel.value;
-    sel.innerHTML='<option value="">— load project —</option>';
+    sel.innerHTML='<option value="">load…</option>';
     names.forEach(n=>{
-      const opt=document.createElement('option');
-      opt.value=n;opt.textContent=n;opt.selected=(n===cur);
-      sel.appendChild(opt);
+      const o=document.createElement('option');o.value=n;o.textContent=n;o.selected=(n===cur);
+      sel.appendChild(o);
     });
   }catch(e){}
 }
