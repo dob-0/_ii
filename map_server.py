@@ -178,7 +178,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 /* ── OUTPUTS TAB ─────────────────────────────────────────────────────────── */
 #tab-outputs{flex-direction:column;overflow-y:auto;padding:16px;gap:0;background:var(--bg)}
 #tab-outputs.active{display:flex}
-#outputs-body{display:flex;flex-direction:column;gap:16px;max-width:780px;margin:0 auto;width:100%}
+#outputs-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;max-width:1180px;margin:0 auto;width:100%}
 .out-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
 .out-section h3{margin:0 0 10px;font-size:10px;letter-spacing:2px;color:var(--text3)}
 .out-layout-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -200,6 +200,16 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 .out-assign-btns{display:flex;gap:5px;flex-wrap:wrap}
 .out-assign-btns button{background:#1a1a1a;color:var(--text3);border:1px solid #2a2a2a;border-radius:2px;padding:3px 10px;font-family:monospace;font-size:10px;cursor:pointer}
 .out-assign-btns button:hover{border-color:#555;color:var(--text)}
+.out-wide{grid-column:1/-1}
+.out-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end}
+.out-form label{font-size:9px;letter-spacing:1px;color:var(--text3)}
+.out-form select,.out-form input{margin-top:4px}
+.out-plan{background:#080808;border:1px solid var(--border);border-radius:3px;padding:10px;font-size:11px;line-height:1.55;color:var(--text2);min-height:72px;white-space:pre-wrap}
+.out-safe{border-color:#153a15;color:var(--green)}
+.out-danger{border-color:#3a1515;color:var(--red)}
+.out-map-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.out-map-btn{padding:7px 8px;text-align:left}
+.out-map-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0d1a0d}
 
 /* ── HELP TAB ────────────────────────────────────────────────────────────── */
 #tab-help{flex-direction:column;overflow-y:auto;background:var(--bg);padding:16px}
@@ -1032,40 +1042,50 @@ async function zonesSave(){
   <div id="outputs-body">
 
     <div class="out-section">
-      <h3>DISPLAY LAYOUT</h3>
-      <div class="out-layout-btns">
-        <button class="out-btn" id="lay-extend"    onclick="setLayout('extend')">EXTEND</button>
-        <button class="out-btn" id="lay-mirror"    onclick="setLayout('mirror')">MIRROR</button>
-        <button class="out-btn" id="lay-projector" onclick="setLayout('projector')">PROJECTOR ONLY</button>
-        <button class="out-btn" id="lay-laptop"    onclick="setLayout('laptop')">LAPTOP ONLY</button>
-      </div>
-      <div id="out-layout-status" class="out-status">—</div>
-    </div>
-
-    <div class="out-section">
       <h3>CONNECTED DISPLAYS</h3>
       <div id="out-displays">—</div>
     </div>
 
     <div class="out-section">
-      <h3>ASSIGN CONTENT</h3>
-      <div class="out-assign-grid">
-        <div class="out-assign-card">
-          <div class="out-assign-label">CONTROLLER  (_ii.py)</div>
-          <div class="out-assign-disp" id="ctrl-disp-label">—</div>
-          <div class="out-assign-btns" id="ctrl-assign-btns"></div>
-        </div>
-        <div class="out-assign-card">
-          <div class="out-assign-label">VISUALS  (visuals.py)</div>
-          <div class="out-assign-disp" id="vis-disp-label">—</div>
-          <div class="out-assign-btns" id="vis-assign-btns"></div>
-        </div>
+      <h3>STAGE OUTPUT SETUP</h3>
+      <div class="out-form">
+        <label>CONTROLLER SCREEN
+          <select id="out-ctrl-display" onchange="previewOutputPlan()"></select>
+        </label>
+        <label>PROJECTOR SCREEN
+          <select id="out-vis-display" onchange="previewOutputPlan()"></select>
+        </label>
+        <label>MAPPING PRESET
+          <select id="out-map-file" onchange="previewOutputPlan()"></select>
+        </label>
+        <label>BLACKOUT WHILE APPLYING
+          <select id="out-blackout" onchange="previewOutputPlan()">
+            <option value="true">YES</option>
+            <option value="false">NO</option>
+          </select>
+        </label>
       </div>
-      <div id="out-assign-status" class="out-status"></div>
+      <div class="out-layout-btns" style="margin-top:10px">
+        <button class="out-btn out-safe" onclick="previewOutputPlan()">PREVIEW PLAN</button>
+        <button class="out-btn out-safe" onclick="applyOutputPlan()">APPLY TO STAGE</button>
+        <button class="out-btn" onclick="restartXLayout()">RESTART X LAYOUT</button>
+      </div>
+      <div id="out-layout-status" class="out-status">—</div>
     </div>
 
-    <div class="out-section">
-      <h3>X11</h3>
+    <div class="out-section out-wide">
+      <h3>OUTPUT PLAN</h3>
+      <div id="out-plan" class="out-plan">Open OUTPUTS to inspect displays and build a stage plan.</div>
+    </div>
+
+    <div class="out-section out-wide">
+      <h3>MAPPING PRESETS</h3>
+      <div id="out-map-list" class="out-map-list"></div>
+      <div id="out-map-status" class="out-status"></div>
+    </div>
+
+    <div class="out-section out-wide">
+      <h3>X11 STATUS</h3>
       <div id="out-x-status">checking…</div>
     </div>
 
@@ -1119,6 +1139,7 @@ ii stop</div>
 
 <script>
 let outputsTimer=null;
+let outputState={displays:[], mappings:[], ctrl:{}, assign:{}};
 
 async function outputsLoad(){
   await refreshOutputs();
@@ -1128,7 +1149,7 @@ async function outputsLoad(){
 
 async function refreshOutputs(){
   try{
-    const r=await fetch('/api/displays');
+    const r=await fetch('/api/output-setup');
     const d=await r.json();
     renderOutputs(d);
   }catch(e){
@@ -1137,10 +1158,7 @@ async function refreshOutputs(){
 }
 
 function renderOutputs(d){
-  ['extend','mirror','projector','laptop'].forEach(n=>{
-    const b=document.getElementById('lay-'+n);
-    if(b)b.classList.toggle('active',d.layout===n);
-  });
+  outputState=d;
   document.getElementById('out-layout-status').textContent='layout: '+(d.layout||'unknown');
   document.getElementById('out-x-status').innerHTML=d.x_running
     ? '<span class="help-ok">running on DISPLAY '+(d.display||':0')+'</span>'
@@ -1161,44 +1179,120 @@ function renderOutputs(d){
   }
 
   const assign=d.assign||{};
-  document.getElementById('ctrl-disp-label').textContent=assign.ctrl||'not pinned';
-  document.getElementById('vis-disp-label').textContent=assign.vis||'not pinned';
-  renderAssignButtons('ctrl',displays);
-  renderAssignButtons('vis',displays);
+  fillDisplaySelect('out-ctrl-display', displays, assign.ctrl||d.suggested_ctrl||'');
+  fillDisplaySelect('out-vis-display', displays, assign.vis||d.suggested_vis||'');
+  fillMapSelect(d.mappings||[], d.active_mapping);
+  renderMapButtons(d.mappings||[], d.active_mapping);
+  previewOutputPlan();
 }
 
-function renderAssignButtons(role,displays){
-  const box=document.getElementById(role+'-assign-btns');
-  box.innerHTML='';
+function fillDisplaySelect(id,displays,selected){
+  const sel=document.getElementById(id);
+  const old=sel.value||selected;
+  sel.innerHTML='';
   (displays||[]).filter(d=>d.connected).forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.name;
+    o.textContent=`${d.name} ${d.resolution||'off'}`;
+    if(d.name===old)o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function fillMapSelect(mappings,active){
+  const sel=document.getElementById('out-map-file');
+  const old=sel.value;
+  sel.innerHTML='';
+  mappings.forEach((m,i)=>{
+    const o=document.createElement('option');
+    o.value=m.file;
+    o.textContent=`${i} ${m.name||m.file}`;
+    if((old&&m.file===old)||(!old&&i===active))o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function renderMapButtons(mappings,active){
+  const box=document.getElementById('out-map-list');
+  box.innerHTML='';
+  mappings.forEach((m,i)=>{
     const b=document.createElement('button');
-    b.textContent=d.name;
-    b.onclick=()=>assignDisplay(role,d.name);
+    b.className='out-btn out-map-btn'+(i===active?' active':'');
+    b.textContent=`${i}  ${m.name||m.file}`;
+    b.onclick=()=>setActiveMapping(i);
     box.appendChild(b);
   });
 }
 
-async function setLayout(layout){
-  document.getElementById('out-layout-status').textContent='applying '+layout+'...';
+function selectedOutputPlan(){
+  const ctrl=document.getElementById('out-ctrl-display').value;
+  const vis=document.getElementById('out-vis-display').value;
+  const mapFile=document.getElementById('out-map-file').value;
+  const mapIdx=(outputState.mappings||[]).findIndex(m=>m.file===mapFile);
+  return {
+    ctrl,
+    vis,
+    mapping:Math.max(0,mapIdx),
+    mapping_file:mapFile,
+    blackout:document.getElementById('out-blackout').value==='true',
+  };
+}
+
+function previewOutputPlan(){
+  const p=selectedOutputPlan();
+  const displays=outputState.displays||[];
+  const cd=displays.find(d=>d.name===p.ctrl);
+  const vd=displays.find(d=>d.name===p.vis);
+  const same=p.ctrl&&p.ctrl===p.vis;
+  const lines=[
+    `controller  -> ${p.ctrl||'choose display'} ${cd&&cd.resolution?'('+cd.resolution+')':''}`,
+    `visuals     -> ${p.vis||'choose display'} ${vd&&vd.resolution?'('+vd.resolution+')':''}`,
+    `mapping     -> ${p.mapping} ${p.mapping_file||''}`,
+    `layout      -> extended desktop, projector right of controller`,
+    `blackout    -> ${p.blackout?'yes, during apply':'no'}`,
+  ];
+  if(same)lines.push('warning     -> controller and visuals are assigned to the same display');
+  document.getElementById('out-plan').textContent=lines.join('\n');
+}
+
+async function applyOutputPlan(){
+  const p=selectedOutputPlan();
+  if(!p.ctrl||!p.vis){
+    document.getElementById('out-layout-status').textContent='choose controller and projector displays first';
+    return;
+  }
+  if(p.ctrl===p.vis&&!confirm('Controller and visuals are on the same display. Apply anyway?'))return;
+  document.getElementById('out-layout-status').textContent='applying safe stage layout...';
   try{
-    const r=await fetch('/api/display-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout})});
+    const r=await fetch('/api/output-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
     const d=await r.json();
-    document.getElementById('out-layout-status').textContent=d.msg||'done';
+    document.getElementById('out-layout-status').textContent=d.msg||'applied';
   }catch(e){
     document.getElementById('out-layout-status').textContent='error: '+e;
   }
   setTimeout(refreshOutputs,700);
 }
 
-async function assignDisplay(role,display){
+async function setActiveMapping(idx){
   try{
-    const r=await fetch('/api/display-assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role,display})});
-    const d=await r.json();
-    document.getElementById('out-assign-status').textContent=d.msg||'saved';
+    await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:idx})});
+    document.getElementById('out-map-status').textContent='mapping '+idx+' active';
   }catch(e){
-    document.getElementById('out-assign-status').textContent='error: '+e;
+    document.getElementById('out-map-status').textContent='error: '+e;
   }
-  setTimeout(refreshOutputs,700);
+  setTimeout(refreshOutputs,400);
+}
+
+async function restartXLayout(){
+  if(!confirm('Restart the X show layout? The display may blink for a few seconds.'))return;
+  document.getElementById('out-layout-status').textContent='restart requested...';
+  try{
+    const r=await fetch('/api/display-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:'restart-x'})});
+    const d=await r.json();
+    document.getElementById('out-layout-status').textContent=d.msg||'restart requested';
+  }catch(e){
+    document.getElementById('out-layout-status').textContent='error: '+e;
+  }
 }
 
 async function helpLoad(){
@@ -1241,8 +1335,13 @@ def _parse_xrandr():
                 parts = geom.split('+')
                 res = parts[0]
                 pos = f'{parts[1]},{parts[2]}'
-            displays.append({'name': name, 'connected': status == 'connected',
-                             'resolution': res, 'position': pos})
+            displays.append({
+                'name': name,
+                'connected': status == 'connected',
+                'primary': ' primary ' in f' {line} ',
+                'resolution': res,
+                'position': pos,
+            })
     return displays
 
 def _detect_layout(displays):
@@ -1308,11 +1407,141 @@ def _get_display_names(displays):
                 projector = n
     return laptop, projector
 
+def _suggest_assignments(displays):
+    active = [d for d in displays if d.get('connected')]
+    laptop, projector = _get_display_names(active)
+    if not laptop:
+        primary = next((d['name'] for d in active if d.get('primary')), None)
+        laptop = primary or (active[0]['name'] if active else None)
+    if not projector:
+        projector = next((d['name'] for d in active if d['name'] != laptop), None)
+    return laptop, projector
+
+def _mapping_files():
+    files = []
+    try:
+        names = sorted(f for f in os.listdir(MAPPINGS_DIR) if f.endswith('.json'))
+    except Exception:
+        return files
+    for name in names:
+        data = load_json(os.path.join(MAPPINGS_DIR, name), {})
+        files.append({
+            'file': name,
+            'name': data.get('name') or name.replace('.json', ''),
+            'surfaces': len(data.get('surfaces') or data.get('zones') or []),
+        })
+    return files
+
+def _display_geometry(display):
+    if not display or not display.get('position') or not display.get('resolution'):
+        return None
+    try:
+        x, y = [int(v) for v in display['position'].split(',', 1)]
+        w, h = [int(v) for v in display['resolution'].split('x', 1)]
+        return x, y, w, h
+    except Exception:
+        return None
+
+def _move_window(title, display, fullscreen=False, maximize=False):
+    geom = _display_geometry(display)
+    if not geom:
+        return False
+    x, y, w, h = geom
+    env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
+    try:
+        subprocess.run(['wmctrl', '-r', title, '-b', 'remove,fullscreen,maximized_vert,maximized_horz'],
+                       env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+        subprocess.run(['wmctrl', '-r', title, '-e', f'0,{x},{y},{w},{h}'],
+                       env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+        if fullscreen:
+            subprocess.run(['wmctrl', '-r', title, '-b', 'add,fullscreen'],
+                           env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+        if maximize:
+            subprocess.run(['wmctrl', '-r', title, '-b', 'add,maximized_vert,maximized_horz'],
+                           env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+        return True
+    except Exception:
+        return False
+
+def _output_setup_state():
+    displays = _parse_xrandr()
+    assign = _load_assign()
+    suggested_ctrl, suggested_vis = _suggest_assignments(displays)
+    ctrl = load_json(CTRL_PATH, {})
+    return {
+        'displays': displays,
+        'layout': _detect_layout(displays),
+        'assign': assign,
+        'suggested_ctrl': suggested_ctrl,
+        'suggested_vis': suggested_vis,
+        'mappings': _mapping_files(),
+        'active_mapping': int(ctrl.get('mapping', 0) or 0),
+        'ctrl': ctrl,
+        'x_running': _x_running(),
+        'display': ':0',
+    }
+
+def _apply_output_setup(body):
+    ctrl_name = body.get('ctrl')
+    vis_name = body.get('vis')
+    mapping = int(body.get('mapping', 0) or 0)
+    blackout = bool(body.get('blackout', True))
+    displays = _parse_xrandr()
+    ctrl_display = next((d for d in displays if d['name'] == ctrl_name and d.get('connected')), None)
+    vis_display = next((d for d in displays if d['name'] == vis_name and d.get('connected')), None)
+    if not ctrl_display or not vis_display:
+        return 'choose connected controller and projector displays'
+
+    env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
+    previous_ctrl = load_json(CTRL_PATH, {})
+    if blackout:
+        state = dict(previous_ctrl)
+        state['blackout'] = True
+        save_json_atomic(CTRL_PATH, state)
+
+    try:
+        cmd = ['xrandr', '--output', ctrl_name, '--auto', '--primary',
+               '--output', vis_name, '--auto', '--right-of', ctrl_name]
+        subprocess.run(cmd, env=env, timeout=5)
+    except Exception as exc:
+        return f'xrandr error: {exc}'
+
+    time_sleep = 0.4
+    try:
+        import time
+        time.sleep(time_sleep)
+    except Exception:
+        pass
+
+    displays = _parse_xrandr()
+    ctrl_display = next((d for d in displays if d['name'] == ctrl_name), ctrl_display)
+    vis_display = next((d for d in displays if d['name'] == vis_name), vis_display)
+    _move_window('_ii controller', ctrl_display, maximize=True)
+    _move_window('ii-VISUALS', vis_display, fullscreen=True)
+
+    assign = _load_assign()
+    assign.update({'ctrl': ctrl_name, 'vis': vis_name})
+    _save_assign(assign)
+
+    state = dict(load_json(CTRL_PATH, {}))
+    state['mapping'] = mapping
+    if blackout:
+        state['blackout'] = bool(previous_ctrl.get('blackout', False))
+    save_json_atomic(CTRL_PATH, state)
+    return f'stage output applied: controller={ctrl_name}, visuals={vis_name}, mapping={mapping}'
+
 def _apply_layout(layout):
     env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
     displays = _parse_xrandr()
     laptop, projector = _get_display_names(displays)
     try:
+        if layout == 'restart-x':
+            helper = '/home/dob/bin/ii'
+            if os.path.exists(helper):
+                subprocess.Popen([helper, 'restart', 'x'],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return 'X show layout restarting'
+            return 'restart helper not found: /home/dob/bin/ii'
         if layout == 'extend':
             cmd = ['xrandr']
             if laptop:
@@ -1323,29 +1552,11 @@ def _apply_layout(layout):
             subprocess.run(cmd, env=env, timeout=5)
             return 'extended desktop applied'
         elif layout == 'mirror':
-            cmd = ['xrandr']
-            if laptop:
-                cmd += ['--output', laptop, '--auto', '--primary']
-            if projector and laptop:
-                cmd += ['--output', projector, '--same-as', laptop]
-            subprocess.run(cmd, env=env, timeout=5)
-            return 'mirror applied'
+            return 'mirror is disabled in the portal; use OS display settings if you really need it'
         elif layout == 'projector':
-            cmd = ['xrandr']
-            if laptop:
-                cmd += ['--output', laptop, '--off']
-            if projector:
-                cmd += ['--output', projector, '--auto', '--primary']
-            subprocess.run(cmd, env=env, timeout=5)
-            return 'projector only'
+            return 'projector-only is disabled to avoid losing the controller'
         elif layout == 'laptop':
-            cmd = ['xrandr']
-            if projector:
-                cmd += ['--output', projector, '--off']
-            if laptop:
-                cmd += ['--output', laptop, '--auto', '--primary']
-            subprocess.run(cmd, env=env, timeout=5)
-            return 'laptop only'
+            return 'laptop-only is disabled in the portal; use ii stop for teardown'
         elif layout == 'start':
             xscript = '/home/dob/_ii/scripts/start-x.sh'
             subprocess.Popen(['sudo', '-u', 'dob', 'bash', '-c',
@@ -1426,6 +1637,8 @@ class Handler(BaseHTTPRequestHandler):
             })
         elif p.path == '/api/system':
             self._json(_system_info())
+        elif p.path == '/api/output-setup':
+            self._json(_output_setup_state())
         else:
             self._send(404, 'text/plain', b'not found')
 
@@ -1503,6 +1716,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json({'ok': True, 'msg': msg})
         elif p.path == '/api/display-assign':
             msg = _assign_content(body.get('role', ''), body.get('display', ''))
+            self._json({'ok': True, 'msg': msg})
+        elif p.path == '/api/output-setup':
+            msg = _apply_output_setup(body)
             self._json({'ok': True, 'msg': msg})
         else:
             self._send(404, 'text/plain', b'not found')

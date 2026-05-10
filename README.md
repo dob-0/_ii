@@ -35,11 +35,13 @@ Use this when the machine is already installed and you just need to run a show.
    http://192.168.88.136:7777
    ```
 
-6. In the portal, open `OUTPUTS` and confirm:
+6. In the portal, open `OUTPUTS` and build the stage output plan:
 
-   - laptop display is the controller
-   - HDMI/projector display is the visuals output
-   - layout is `EXTEND`
+   - choose the laptop panel as `CONTROLLER SCREEN`
+   - choose HDMI/projector as `PROJECTOR SCREEN`
+   - choose the mapping preset
+   - click `PREVIEW PLAN`
+   - click `APPLY TO STAGE`
 
 7. Open `CTRL` for live performance controls.
 
@@ -77,7 +79,7 @@ Portal tabs:
 | `ZONES` | Quickly enable/disable zones and assign modes per surface. |
 | `CTRL` | Live VJ controls: mode, palette, BPM, layer B, flash, blackout. |
 | `MEDIA` | Upload video/image files and play video through the output stack. |
-| `OUTPUTS` | Check connected displays, apply layouts, move controller/visuals. |
+| `OUTPUTS` | Build and apply the stage output plan: controller screen, projector screen, mapping preset. |
 | `HELP` | Shows portal URL, SSH command, IP addresses, display state, and rescue commands. |
 
 The portal writes to `control.json`, mapping files in `mappings/`, and runtime
@@ -104,12 +106,20 @@ DISPLAY=:0 wmctrl -lG
 ii status
 ```
 
+The `OUTPUTS` tab follows the same practical idea as professional mapper tools:
+choose a screen, choose which content goes to it, choose a mapping preset, then
+apply deliberately. It avoids one-click mirror/projector-only changes during a
+show because those can hide the controller or strand the visuals on the wrong
+display.
+
 If the projector is connected but black:
 
 1. Check `OUTPUTS` in the web portal.
-2. Choose `EXTEND`.
-3. Confirm `ii-VISUALS` is on the HDMI display.
-4. If still wrong, restart X mode:
+2. Choose the laptop panel for `CONTROLLER SCREEN`.
+3. Choose the HDMI output for `PROJECTOR SCREEN`.
+4. Choose the correct mapping preset.
+5. Click `PREVIEW PLAN`, then `APPLY TO STAGE`.
+6. If still wrong, restart X mode:
 
    ```bash
    ii restart x
@@ -151,7 +161,7 @@ Before doors:
 2. Boot the `_ii` machine.
 3. Start X mode with `ii xstart`.
 4. Open `http://192.168.88.136:7777`.
-5. Use `OUTPUTS` to verify laptop/projector placement.
+5. Use `OUTPUTS` to apply the controller/projector/mapping stage plan.
 6. Use `MAP` or `ZONES` to confirm the projection surfaces.
 7. Use `CTRL` to pick a starting mode and palette.
 8. Keep `BLACKOUT` available in the CTRL tab for emergencies.
