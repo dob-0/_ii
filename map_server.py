@@ -7,6 +7,7 @@ Open on any browser:        http://192.168.88.136:7777
 import json
 import os
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -48,7 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .tab-btn.active{color:var(--tab-active);border-color:var(--border3)}
 
 /* ── tab panes ── */
-#tab-map,#tab-ctrl,#tab-zones,#tab-outputs{flex:1;display:none;overflow:hidden}
+#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-outputs,#tab-help{flex:1;display:none;overflow:hidden}
 #tab-map.active{display:flex}
 #tab-ctrl.active{display:flex;overflow-y:auto}
 #tab-zones.active{display:flex;flex-direction:column;overflow:hidden}
@@ -200,6 +201,23 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 .out-assign-btns button{background:#1a1a1a;color:var(--text3);border:1px solid #2a2a2a;border-radius:2px;padding:3px 10px;font-family:monospace;font-size:10px;cursor:pointer}
 .out-assign-btns button:hover{border-color:#555;color:var(--text)}
 
+/* ── HELP TAB ────────────────────────────────────────────────────────────── */
+#tab-help{flex-direction:column;overflow-y:auto;background:var(--bg);padding:16px}
+#tab-help.active{display:flex}
+#help-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;max-width:1100px;width:100%;margin:0 auto}
+.help-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.help-section h3{font-size:10px;letter-spacing:2px;color:var(--text2);margin-bottom:10px}
+.help-section p{font-size:11px;line-height:1.5;color:var(--text3);margin-bottom:8px}
+.help-list{display:flex;flex-direction:column;gap:6px}
+.help-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #171717;padding-bottom:5px;font-size:11px}
+.help-row span:first-child{color:var(--text4)}
+.help-row span:last-child{color:var(--text);text-align:right}
+.help-code{background:#090909;border:1px solid var(--border);border-radius:3px;color:var(--accent3);font-size:11px;line-height:1.5;padding:9px 10px;white-space:pre-wrap;word-break:break-word}
+.help-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:8px}
+.help-actions button{margin-top:0}
+.help-ok{color:var(--accent3)}
+.help-warn{color:var(--accent2)}
+
 </style></head>
 <body>
 
@@ -211,6 +229,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
   <button class="tab-btn"        id="btn-ctrl"  onclick="switchTab('ctrl')">[ CTRL ]</button>
   <button class="tab-btn"        id="btn-media" onclick="switchTab('media')">[ MEDIA ]</button>
   <button class="tab-btn"        id="btn-outputs" onclick="switchTab('outputs')">[ OUTPUTS ]</button>
+  <button class="tab-btn"        id="btn-help" onclick="switchTab('help')">[ HELP ]</button>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -418,7 +437,7 @@ const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22
 let activeTab='map';
 function switchTab(t){
   activeTab=t;
-  ['map','zones','ctrl','media'].forEach(n=>{
+  ['map','zones','ctrl','media','outputs','help'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('btn-'+n).classList.toggle('active',t===n);
   });
@@ -426,6 +445,8 @@ function switchTab(t){
   if(t==='ctrl'){startCtrlPoll();}
   if(t==='zones'){zonesInit();}
   if(t==='media'){mediaLoad();mediaStatusPoll();}
+  if(t==='outputs'){outputsLoad();}
+  if(t==='help'){helpLoad();}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1051,6 +1072,151 @@ async function zonesSave(){
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     HELP TAB
+     ════════════════════════════════════════ -->
+<div id="tab-help">
+  <div id="help-body">
+    <div class="help-section">
+      <h3>CONNECT</h3>
+      <div class="help-list">
+        <div class="help-row"><span>Web portal</span><span id="help-web">—</span></div>
+        <div class="help-row"><span>SSH</span><span id="help-ssh">—</span></div>
+        <div class="help-row"><span>Host</span><span id="help-host">—</span></div>
+        <div class="help-row"><span>IP addresses</span><span id="help-ips">—</span></div>
+      </div>
+    </div>
+    <div class="help-section">
+      <h3>RUN THE SHOW</h3>
+      <div class="help-code">ii status
+ii xstart
+ii restart x
+ii logs x
+ii attach</div>
+      <p>Use X mode for laptop controller plus projector visuals. Use CTRL for live controls and OUTPUTS for display placement.</p>
+    </div>
+    <div class="help-section">
+      <h3>DISPLAY CHECK</h3>
+      <div class="help-list">
+        <div class="help-row"><span>X11</span><span id="help-x">—</span></div>
+        <div class="help-row"><span>Layout</span><span id="help-layout">—</span></div>
+        <div class="help-row"><span>Displays</span><span id="help-displays">—</span></div>
+      </div>
+      <div class="help-actions">
+        <button class="cbtn" onclick="switchTab('outputs')">OPEN OUTPUTS</button>
+        <button class="cbtn" onclick="helpLoad()">REFRESH</button>
+      </div>
+    </div>
+    <div class="help-section">
+      <h3>EMERGENCY</h3>
+      <div class="help-code">ii restart x
+ii restart vis
+ii stop</div>
+      <p>Use BLACKOUT in CTRL for a clean blank screen. Restart X if the controller is on the wrong screen or the projector is black.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let outputsTimer=null;
+
+async function outputsLoad(){
+  await refreshOutputs();
+  clearInterval(outputsTimer);
+  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},2500);
+}
+
+async function refreshOutputs(){
+  try{
+    const r=await fetch('/api/displays');
+    const d=await r.json();
+    renderOutputs(d);
+  }catch(e){
+    document.getElementById('out-x-status').textContent='display API unavailable';
+  }
+}
+
+function renderOutputs(d){
+  ['extend','mirror','projector','laptop'].forEach(n=>{
+    const b=document.getElementById('lay-'+n);
+    if(b)b.classList.toggle('active',d.layout===n);
+  });
+  document.getElementById('out-layout-status').textContent='layout: '+(d.layout||'unknown');
+  document.getElementById('out-x-status').innerHTML=d.x_running
+    ? '<span class="help-ok">running on DISPLAY '+(d.display||':0')+'</span>'
+    : '<span class="help-warn">not running</span>';
+
+  const list=document.getElementById('out-displays');
+  const displays=d.displays||[];
+  if(!displays.length){
+    list.innerHTML='<div class="out-status">no displays reported by xrandr</div>';
+  }else{
+    list.innerHTML='<div class="out-disp-list">'+displays.map(x=>`
+      <div class="out-disp-row">
+        <span class="out-disp-dot ${x.connected?'on':''}"></span>
+        <span class="out-disp-name">${x.name}</span>
+        <span class="out-disp-res">${x.resolution||'off'}</span>
+        <span class="out-disp-pos">${x.position||''}</span>
+      </div>`).join('')+'</div>';
+  }
+
+  const assign=d.assign||{};
+  document.getElementById('ctrl-disp-label').textContent=assign.ctrl||'not pinned';
+  document.getElementById('vis-disp-label').textContent=assign.vis||'not pinned';
+  renderAssignButtons('ctrl',displays);
+  renderAssignButtons('vis',displays);
+}
+
+function renderAssignButtons(role,displays){
+  const box=document.getElementById(role+'-assign-btns');
+  box.innerHTML='';
+  (displays||[]).filter(d=>d.connected).forEach(d=>{
+    const b=document.createElement('button');
+    b.textContent=d.name;
+    b.onclick=()=>assignDisplay(role,d.name);
+    box.appendChild(b);
+  });
+}
+
+async function setLayout(layout){
+  document.getElementById('out-layout-status').textContent='applying '+layout+'...';
+  try{
+    const r=await fetch('/api/display-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout})});
+    const d=await r.json();
+    document.getElementById('out-layout-status').textContent=d.msg||'done';
+  }catch(e){
+    document.getElementById('out-layout-status').textContent='error: '+e;
+  }
+  setTimeout(refreshOutputs,700);
+}
+
+async function assignDisplay(role,display){
+  try{
+    const r=await fetch('/api/display-assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role,display})});
+    const d=await r.json();
+    document.getElementById('out-assign-status').textContent=d.msg||'saved';
+  }catch(e){
+    document.getElementById('out-assign-status').textContent='error: '+e;
+  }
+  setTimeout(refreshOutputs,700);
+}
+
+async function helpLoad(){
+  try{
+    const [sysRes,dispRes]=await Promise.all([fetch('/api/system'),fetch('/api/displays')]);
+    const sys=await sysRes.json();
+    const disp=await dispRes.json();
+    document.getElementById('help-web').textContent=sys.portal_url||location.origin;
+    document.getElementById('help-ssh').textContent=sys.ssh||'ssh dob@'+location.hostname;
+    document.getElementById('help-host').textContent=sys.hostname||'—';
+    document.getElementById('help-ips').textContent=(sys.ips||[]).join(', ')||location.hostname;
+    document.getElementById('help-x').innerHTML=disp.x_running?'<span class="help-ok">running</span>':'<span class="help-warn">stopped</span>';
+    document.getElementById('help-layout').textContent=disp.layout||'unknown';
+    document.getElementById('help-displays').textContent=(disp.displays||[]).filter(d=>d.connected).map(d=>`${d.name} ${d.resolution||'off'}`).join(' · ')||'none';
+  }catch(e){}
+}
+</script>
+
 </body></html>"""
 
 
@@ -1101,6 +1267,35 @@ def _save_assign(a):
 
 def _x_running():
     return os.path.exists('/tmp/.X11-unix/X0')
+
+def _local_ips():
+    ips = []
+    try:
+        out = subprocess.check_output(['hostname', '-I'], stderr=subprocess.DEVNULL, timeout=2).decode()
+        ips.extend(ip for ip in out.split() if not ip.startswith('127.'))
+    except Exception:
+        pass
+    if not ips:
+        try:
+            ip = socket.gethostbyname(socket.gethostname())
+            if not ip.startswith('127.'):
+                ips.append(ip)
+        except Exception:
+            pass
+    return ips
+
+def _system_info():
+    ips = _local_ips()
+    host = socket.gethostname()
+    primary = ips[0] if ips else 'localhost'
+    return {
+        'hostname': host,
+        'ips': ips,
+        'portal_url': f'http://{primary}:{PORT}',
+        'ssh': f'ssh dob@{primary}',
+        'repo': BASE,
+        'port': PORT,
+    }
 
 def _get_display_names(displays):
     laptop = projector = None
@@ -1171,7 +1366,7 @@ def _assign_content(role, display):
     if not disp or not disp['position']:
         return f'{role} saved → {display} (position unknown)'
     px, py = disp['position'].split(',')
-    title = '_ii controller' if role == 'ctrl' else '_ii visuals'
+    title = '_ii controller' if role == 'ctrl' else 'ii-VISUALS'
     try:
         subprocess.run(['wmctrl', '-r', title, '-e', f'0,{px},{py},-1,-1'],
                        env=env, timeout=3)
@@ -1229,6 +1424,8 @@ class Handler(BaseHTTPRequestHandler):
                 'x_running': _x_running(),
                 'display': ':0',
             })
+        elif p.path == '/api/system':
+            self._json(_system_info())
         else:
             self._send(404, 'text/plain', b'not found')
 

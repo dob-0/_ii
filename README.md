@@ -1,12 +1,175 @@
 # _ii
 
-Terminal-first VJ and projection toolkit for live club use. `_ii` combines a
-curses control deck, ANSI terminal visuals, pygame/KMS output, projection
-mapping, audio/camera automation, MIDI/OSC input, and optional Art-Net output.
+`_ii` is a live visual and projection-control system. It runs a controller on
+the laptop screen, sends visuals to a projector or second display, and exposes a
+browser portal for mapping, live controls, media, and display management.
 
-The current project name and runtime entrypoint are `_ii`.
+The usual live setup is:
 
-## Quick Start
+- Debian machine connected to the projector by HDMI.
+- Laptop display used for the controller.
+- Phone, tablet, or laptop on the same network opened to the web portal.
+- Optional SSH session for maintenance.
+
+## Quick Operator Start
+
+Use this when the machine is already installed and you just need to run a show.
+
+1. Connect projector or LED processor to HDMI.
+2. Connect the control device to the same network as the `_ii` machine.
+3. SSH into the machine:
+
+   ```bash
+   ssh dob@192.168.88.136
+   ```
+
+4. Start the full X11 show layout:
+
+   ```bash
+   ii xstart
+   ```
+
+5. Open the web portal from any browser on the same network:
+
+   ```text
+   http://192.168.88.136:7777
+   ```
+
+6. In the portal, open `OUTPUTS` and confirm:
+
+   - laptop display is the controller
+   - HDMI/projector display is the visuals output
+   - layout is `EXTEND`
+
+7. Open `CTRL` for live performance controls.
+
+8. If the projector is black or windows land on the wrong screen:
+
+   ```bash
+   ii restart x
+   ```
+
+## Web Portal
+
+Run the portal on the `_ii` machine:
+
+```bash
+python3 map_server.py
+```
+
+Open it from the machine itself:
+
+```text
+http://localhost:7777
+```
+
+Open it from another device on the network:
+
+```text
+http://192.168.88.136:7777
+```
+
+Portal tabs:
+
+| Tab | Use |
+| --- | --- |
+| `MAP` | Create and edit projection surfaces. Drag corners to warp zones. |
+| `ZONES` | Quickly enable/disable zones and assign modes per surface. |
+| `CTRL` | Live VJ controls: mode, palette, BPM, layer B, flash, blackout. |
+| `MEDIA` | Upload video/image files and play video through the output stack. |
+| `OUTPUTS` | Check connected displays, apply layouts, move controller/visuals. |
+| `HELP` | Shows portal URL, SSH command, IP addresses, display state, and rescue commands. |
+
+The portal writes to `control.json`, mapping files in `mappings/`, and runtime
+state files. These runtime files are intentionally ignored by git.
+
+## Display And Connection Guide
+
+Recommended live display layout:
+
+| Screen | Purpose | Typical connector |
+| --- | --- | --- |
+| Laptop panel | `_ii.py` controller | built-in `LVDS-1` or `eDP-1` |
+| Projector | `ii-VISUALS` terminal visuals | `HDMI-1`, `HDMI-A-1`, or similar |
+
+The project now uses `visuals_monitor: "auto-second"` in `config.json`, so it
+prefers the non-primary connected display instead of depending on a single HDMI
+name.
+
+Useful display checks:
+
+```bash
+DISPLAY=:0 xrandr --query
+DISPLAY=:0 wmctrl -lG
+ii status
+```
+
+If the projector is connected but black:
+
+1. Check `OUTPUTS` in the web portal.
+2. Choose `EXTEND`.
+3. Confirm `ii-VISUALS` is on the HDMI display.
+4. If still wrong, restart X mode:
+
+   ```bash
+   ii restart x
+   ```
+
+## Remote Management
+
+The `ii` command at `~/bin/ii` manages the live engine.
+
+```bash
+ii start                   # start tmux controller + TTY visuals
+ii stop                    # stop visuals and controller
+ii status                  # show running pieces
+ii attach                  # attach to tmux controller
+ii logs vis                # follow terminal visual logs
+ii logs web                # follow portal logs
+ii logs x                  # follow X11 startup logs
+ii update                  # git pull latest code
+ii watch 10                # auto-pull every 10 seconds
+ii xstart                  # start laptop-controller/projector-visuals X11 mode
+ii xstop                   # stop X11 mode and return to TTY visuals
+ii restart x               # restart the X11 show layout
+ii restart vis             # restart only visuals
+ii restart ctrl            # restart only controller
+ii restart web             # restart only web portal
+```
+
+Attach to the controller directly:
+
+```bash
+ssh dob@192.168.88.136 -t "tmux attach -t ii"
+```
+
+## Normal Show Workflow
+
+Before doors:
+
+1. Power the projector or processor first.
+2. Boot the `_ii` machine.
+3. Start X mode with `ii xstart`.
+4. Open `http://192.168.88.136:7777`.
+5. Use `OUTPUTS` to verify laptop/projector placement.
+6. Use `MAP` or `ZONES` to confirm the projection surfaces.
+7. Use `CTRL` to pick a starting mode and palette.
+8. Keep `BLACKOUT` available in the CTRL tab for emergencies.
+
+During the show:
+
+- Use `CTRL` for mode, palette, BPM, layer, flash, and blackout.
+- Use `ZONES` if each mapped surface should show a different mode.
+- Use `MEDIA` only when you intentionally want video playback.
+- Use SSH only for maintenance commands such as `ii status` or `ii restart x`.
+
+After the show:
+
+```bash
+ii stop
+```
+
+## Local Development
 
 Controller plus autostarted terminal visuals:
 
@@ -29,13 +192,6 @@ python3 output.py --windowed 1280 720
 python3 output.py --map mappings/quad.json --vw 128 --vh 72
 ```
 
-Projection mapper and browser control panel:
-
-```bash
-python3 map_server.py
-# open http://localhost:7777
-```
-
 Framebuffer mapper for direct `/dev/fb0` output:
 
 ```bash
@@ -50,119 +206,63 @@ python3 audio.py --sensitivity 1.5
 python3 osc_server.py --port 7000
 ```
 
-Commit and push all repo changes:
+## Installation Notes
 
-```bash
-scripts/git-sync.sh "describe the change"
-```
-
-## Remote Management
-
-The `ii` script at `~/bin/ii` manages the full engine over SSH — no physical access needed.
-
-```bash
-ii start                   # start everything
-ii stop                    # stop everything
-ii restart [vis|ctrl|web]  # restart one component
-ii status                  # show what is running
-ii attach                  # open _ii.py deck in current terminal
-ii logs [vis|web]          # live log tail
-ii update                  # git pull + hot-reload applies within 1s
-ii watch [seconds]         # auto-pull loop for live performance
-```
-
-The engine runs three components:
-
-| Component | What | Where |
-| --- | --- | --- |
-| `vis` | `visuals.py` — ANSI renderer | TTY1 (projector) |
-| `web` | `map_server.py` — browser control panel | `:7777` |
-| `ctrl` | `_ii.py` — curses deck | tmux session `ii` |
-
-Attach to the live deck from any SSH session:
-
-```bash
-ssh dob@192.168.88.136 -t "tmux attach -t ii"
-```
-
-Browser control panel — any device on the network:
-
-```
-http://192.168.88.136:7777
-```
-
-## Boot Setup
-
-Three systemd services start automatically on every boot:
-
-| Service | Role |
-| --- | --- |
-| `ii-visuals.service` | `visuals.py` on TTY1 (projector) |
-| `ii-web.service` | `map_server.py` on `:7777` |
-| `ii-ctrl.service` | `_ii.py` deck in tmux session `ii` |
-
-Service management:
-
-```bash
-sudo systemctl restart ii-visuals   # restart visuals
-sudo systemctl restart ii-web       # restart web panel
-sudo systemctl restart ii-ctrl      # restart deck
-sudo journalctl -fu ii-visuals      # live visuals log
-```
-
-## Live Update Workflow
-
-Edit on laptop → push → pull on Debian → hot-reload applies within ~1 second, no restart needed:
-
-```bash
-# laptop
-git push
-
-# debian
-ii update
-```
-
-During a performance, auto-apply every push:
-
-```bash
-ii watch 10    # polls git every 10s, pulls and applies automatically
-```
-
-## Install Notes
-
-Core terminal visuals use the Python standard library. Extra outputs and inputs
-need optional packages:
+Core terminal visuals use the Python standard library. Optional outputs and
+inputs need packages:
 
 ```bash
 pip install pygame numpy sounddevice opencv-python python-osc
 ```
 
-Useful system tools for stage placement:
+Useful system tools:
 
 ```bash
-sudo apt install wmctrl x11-xserver-utils
+sudo apt install wmctrl x11-xserver-utils tmux kitty openbox unclutter mpv
 ```
 
-For `fb_mapper.py`, the user running it needs access to `/dev/fb0`, usually via
-the `video` group or root on a console TTY.
+Install system services from the repo:
+
+```bash
+sudo ./install-services.sh
+```
+
+Services:
+
+| Service | Role |
+| --- | --- |
+| `ii-visuals.service` | `visuals.py` on TTY1 |
+| `ii-web.service` | `map_server.py` on port `7777` |
+| `ii-ctrl.service` | `_ii.py` deck in tmux session `ii` |
+| `ii-boot.service` | optional wrapper around `~/bin/ii start` |
+
+Service commands:
+
+```bash
+sudo systemctl restart ii-visuals
+sudo systemctl restart ii-web
+sudo systemctl restart ii-ctrl
+sudo journalctl -fu ii-visuals
+```
 
 ## Runtime Pieces
 
 | File | Role |
 | --- | --- |
-| `_ii.py` | live curses deck, node graph evaluator, manual overrides |
-| `visuals.py` | ANSI terminal renderer with A/B layers and zone mapping |
-| `window.py` | launches and places the terminal visuals window |
-| `output.py` | pygame output with fullscreen/windowed modes and quad mapping |
-| `map_server.py` | browser mapping editor plus web control panel on port `7777` |
-| `fb_mapper.py` | direct framebuffer renderer for projector/KMS setups |
-| `audio.py` | microphone level, peak, and BPM writer for `control.json` |
-| `osc_server.py` | OSC receiver mapping messages into `control.json` |
-| `nodes.py` | live automation graph; `_ii.py` hot-reloads it |
+| `_ii.py` | curses controller, node graph evaluator, manual overrides |
+| `visuals.py` | ANSI terminal visual renderer |
+| `window.py` | launches and places the visuals terminal window |
+| `map_server.py` | web portal for mapping, controls, media, outputs, help |
+| `output.py` | pygame output with fullscreen/windowed modes |
+| `fb_mapper.py` | direct framebuffer renderer |
+| `audio.py` | microphone level, peak, and BPM writer |
+| `osc_server.py` | OSC receiver writing to `control.json` |
+| `nodes.py` | live automation graph, hot-reloaded by `_ii.py` |
 | `node_lib.py` | signal nodes, camera/audio inputs, Art-Net outputs |
-| `modes/` | visual mode implementations |
-| `mappings/` | projection and zone layouts |
-| `live/` | headless GLSL, ANSI, SuperCollider, ffmpeg, and tmux tools |
+| `modes/` | visual modes |
+| `mappings/` | projection surface layouts |
+| `media/` | uploaded media files, ignored by git |
+| `live/` | headless GLSL, ANSI, SuperCollider, ffmpeg, tmux helpers |
 
 ## Control Flow
 
@@ -171,25 +271,12 @@ and manual overrides, then writes `control.json`.
 
 Renderers read `control.json`:
 
-- `visuals.py` renders ANSI terminal output and writes `status.json`.
+- `visuals.py` renders terminal visuals and writes `status.json`.
 - `output.py` renders through pygame and writes `status.json`.
 - `fb_mapper.py` renders directly to `/dev/fb0`.
-- `map_server.py` edits mapping files and can update live controls.
+- `map_server.py` edits mapping files and updates live controls.
 
-`status.json` feeds liveness and FPS back into the deck/control panel.
-
-## Git Sync
-
-Use `scripts/git-sync.sh` after edits that should land on GitHub:
-
-```bash
-scripts/git-sync.sh "short commit message"
-```
-
-The script stages all repo changes with `git add -A`, commits them, pushes the
-current branch, then prints the latest commit and final branch status. Runtime
-files such as `control.json`, `status.json`, temp files, and Python caches stay
-ignored by `.gitignore`.
+`status.json` feeds liveness and FPS back into the controller and portal.
 
 ## Controller Keys
 
@@ -221,8 +308,6 @@ ignored by `.gitignore`.
 
 ## Modes
 
-Current mode order:
-
 | # | Mode |
 | --- | --- |
 | 0 | `RAIN` |
@@ -246,30 +331,13 @@ Current mode order:
 | 18 | `POSTER` |
 | 19 | `MAPTST` |
 
-`LIQUID` and `POSTER` are identity modes with large block-text and arc graphics. `MAPTST` is for checking
-projection surfaces and zone layout.
+`MAPTST` is the safest mode for checking projection surfaces.
 
 ## Palettes And Symbols
 
-Palettes:
+Palettes: `STEEL`, `ACID`, `VOID`, `NEON`, `ULTRA`, `DEEP`, `BLOOD`, `EMBER`.
 
-- `STEEL`
-- `ACID`
-- `VOID`
-- `NEON`
-- `ULTRA`
-- `DEEP`
-- `BLOOD`
-- `EMBER`
-
-Symbol sets:
-
-- `BLOCK`
-- `ASCII`
-- `DIGIT`
-- `GRID`
-- `SHAPES`
-- `MATH`
+Symbol sets: `BLOCK`, `ASCII`, `DIGIT`, `GRID`, `SHAPES`, `MATH`.
 
 Primary, secondary, and accent colors can follow the active palette or be
 overridden manually from the controller.
@@ -281,11 +349,10 @@ Bundled mapping presets:
 - `mappings/default.json` full screen
 - `mappings/split2.json` two vertical zones
 - `mappings/quad.json` four zones
-- `mappings/split3.json` three cube-style vertical zones
+- `mappings/split3.json` three vertical zones
 
-`G` cycles mappings from the deck. `map_server.py` edits surface mappings in a
-browser and exposes a second control surface for mode, layer, palette, BPM,
-flash, and blackout.
+Use `MAP` in the portal for geometry. Use `ZONES` for fast mode assignment and
+surface enable/disable during a show.
 
 ## Automation Graph
 
@@ -318,7 +385,9 @@ GRAPH = [
 
 ## OSC
 
-`osc_server.py` listens on `0.0.0.0:7000` by default. Native addresses include:
+`osc_server.py` listens on `0.0.0.0:7000` by default.
+
+Native addresses:
 
 - `/_ii/mode`
 - `/_ii/mode_b`
@@ -338,12 +407,71 @@ GRAPH = [
 
 Create `osc_map.json` in the project root to add or override address mappings.
 
-## Hot Reload
+## Troubleshooting
 
-- edit `nodes.py` and `_ii.py` reloads the graph
-- edit `visuals.py` or files in `modes/` and terminal visuals restart in place
-- edit mapping JSON and `output.py` / `fb_mapper.py` reload the map on a timer
-- edit `window.py` and restart `_ii.py`
+Projector black, controller visible:
+
+```bash
+ii status
+DISPLAY=:0 wmctrl -lG
+ii restart x
+```
+
+Portal does not open:
+
+```bash
+ii status
+ii restart web
+curl http://localhost:7777
+```
+
+Wrong display names:
+
+```bash
+DISPLAY=:0 xrandr --query
+```
+
+Visuals are running but frozen:
+
+```bash
+ii restart x
+```
+
+Need a clean blank screen:
+
+- Press `B` in the controller.
+- Or click `BLACKOUT` in the portal `CTRL` tab.
+
+## Live Update Workflow
+
+Edit on laptop, push, then pull on the Debian machine:
+
+```bash
+# laptop
+scripts/git-sync.sh "describe the change"
+
+# debian
+ii update
+```
+
+During development or rehearsal:
+
+```bash
+ii watch 10
+```
+
+## Git Sync
+
+Use the repository sync script after intentional changes:
+
+```bash
+scripts/git-sync.sh "short commit message"
+```
+
+The script stages repo changes, commits, pushes the current branch, and prints
+the final git status. Runtime files such as `control.json`, `status.json`,
+`display_assign.json`, media uploads, temp files, and Python caches should stay
+ignored by `.gitignore`.
 
 ## Repository Layout
 
@@ -362,6 +490,7 @@ _ii/
 ├── nodes.py
 ├── modes/
 ├── mappings/
+├── media/
 ├── live/
 ├── innux/
 ├── docs/
