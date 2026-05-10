@@ -49,7 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .tab-btn.active{color:var(--tab-active);border-color:var(--border3)}
 
 /* ── tab panes ── */
-#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-outputs,#tab-help{flex:1;display:none;overflow:hidden}
+#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-outputs,#tab-help,#tab-term{flex:1;display:none;overflow:hidden}
 #tab-map.active{display:flex}
 #tab-ctrl.active{display:flex;overflow-y:auto}
 #tab-zones.active{display:flex;flex-direction:column;overflow:hidden}
@@ -209,6 +209,22 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 /* ── HELP TAB ────────────────────────────────────────────────────────────── */
 #tab-help{flex-direction:column;overflow-y:auto;background:var(--bg);padding:16px}
 #tab-help.active{display:flex}
+
+/* ── TERM TAB ────────────────────────────────────────────────────────────── */
+#tab-term.active{display:flex;flex-direction:column;background:#000}
+#term-quickbar{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0}
+#term-quickbar button{font:10px/1 monospace;letter-spacing:1px;padding:3px 8px;background:#0a0f0a;border:1px solid #1c3a1c;color:#3d8a3d;cursor:pointer}
+#term-quickbar button:hover{background:#0d1f0d;color:#55cc55}
+#term-output{flex:1;overflow-y:auto;padding:10px 14px;font:12px/1.5 monospace;color:#c8ffc8;background:#000;white-space:pre-wrap;word-break:break-all}
+#term-output .t-prompt{color:#44ff88}
+#term-output .t-cmd{color:#ffffff}
+#term-output .t-out{color:#aaffaa}
+#term-output .t-err{color:#ff8866}
+#term-output .t-rc{color:#555;font-size:10px}
+#term-input-row{display:flex;align-items:center;gap:6px;padding:6px 14px;background:#050505;border-top:1px solid #111;flex-shrink:0}
+#term-input-row span{color:#44ff88;font:12px/1 monospace;white-space:nowrap}
+#term-input{flex:1;background:transparent;border:none;outline:none;color:#fff;font:12px/1 monospace;caret-color:#44ff88}
+#term-cwd{font:10px/1 monospace;color:#333;flex-shrink:0}
 #help-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;max-width:1100px;width:100%;margin:0 auto}
 .help-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
 .help-section h3{font-size:10px;letter-spacing:2px;color:var(--text2);margin-bottom:10px}
@@ -235,6 +251,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
   <button class="tab-btn"        id="btn-media" onclick="switchTab('media')">[ MEDIA ]</button>
   <button class="tab-btn"        id="btn-outputs" onclick="switchTab('outputs')">[ OUTPUTS ]</button>
   <button class="tab-btn"        id="btn-help" onclick="switchTab('help')">[ HELP ]</button>
+  <button class="tab-btn"        id="btn-term" onclick="switchTab('term')">[ TERM ]</button>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -455,7 +472,7 @@ function switchTab(t){
     _updateMapBtn();
   }
   activeTab=t;
-  ['map','zones','ctrl','media','outputs','help'].forEach(n=>{
+  ['map','zones','ctrl','media','outputs','help','term'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('btn-'+n).classList.toggle('active',t===n);
   });
@@ -465,6 +482,7 @@ function switchTab(t){
   if(t==='media'){mediaLoad();mediaStatusPoll();}
   if(t==='outputs'){outputsLoad();}
   if(t==='help'){helpLoad();}
+  if(t==='term'){setTimeout(()=>document.getElementById('term-input').focus(),50);}
 }
 function _enterMapTab(){
   mapModeActive=true;
@@ -1194,6 +1212,32 @@ ii stop</div>
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     TERM TAB
+     ════════════════════════════════════════ -->
+<div id="tab-term">
+  <div id="term-quickbar">
+    <button onclick="termRun('ii status')">ii status</button>
+    <button onclick="termRun('ii logs vis')">logs vis</button>
+    <button onclick="termRun('ii logs ctrl')">logs ctrl</button>
+    <button onclick="termRun('ii logs web')">logs web</button>
+    <button onclick="termRun('git log --oneline -8')">git log</button>
+    <button onclick="termRun('git status')">git status</button>
+    <button onclick="termRun('df -h /')">df</button>
+    <button onclick="termRun('free -h')">mem</button>
+    <button onclick="termRun('uptime')">uptime</button>
+    <button onclick="termRun('ls media/')">ls media</button>
+    <button onclick="termClear()">CLEAR</button>
+  </div>
+  <div id="term-output"></div>
+  <div id="term-input-row">
+    <span id="term-ps1">dob@ii:~$ </span>
+    <input id="term-input" type="text" autocomplete="off" spellcheck="false"
+           placeholder="enter command…" onkeydown="termKey(event)">
+    <span id="term-cwd"></span>
+  </div>
+</div>
+
 <script>
 let outputsTimer=null;
 let outputApplyBusy=false;
@@ -1336,6 +1380,73 @@ async function restartProgram(target){
     status.textContent = 'error: ' + e;
   }
 }
+
+// ── TERM TAB ──────────────────────────────────────────────────────────────────
+let _termHistory=[], _termHistIdx=-1, _termBusy=false;
+
+function termClear(){
+  document.getElementById('term-output').innerHTML='';
+}
+
+function termKey(e){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const inp=document.getElementById('term-input');
+    const cmd=inp.value.trim();
+    if(!cmd)return;
+    inp.value='';
+    _termHistory.unshift(cmd);
+    if(_termHistory.length>100)_termHistory.pop();
+    _termHistIdx=-1;
+    termRun(cmd);
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    _termHistIdx=Math.min(_termHistIdx+1,_termHistory.length-1);
+    if(_termHistIdx>=0)document.getElementById('term-input').value=_termHistory[_termHistIdx];
+  } else if(e.key==='ArrowDown'){
+    e.preventDefault();
+    _termHistIdx=Math.max(_termHistIdx-1,-1);
+    document.getElementById('term-input').value=_termHistIdx>=0?_termHistory[_termHistIdx]:'';
+  }
+}
+
+async function termRun(cmd){
+  if(_termBusy)return;
+  _termBusy=true;
+  const out=document.getElementById('term-output');
+  const row=document.createElement('div');
+  row.innerHTML=`<span class="t-prompt">dob@ii:~$ </span><span class="t-cmd">${_esc(cmd)}</span>`;
+  out.appendChild(row);
+  out.scrollTop=out.scrollHeight;
+  try{
+    const r=await fetch('/api/terminal',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cmd,timeout:15})});
+    const d=await r.json();
+    if(d.output){
+      const o=document.createElement('div');
+      o.className='t-out';
+      o.textContent=d.output;
+      out.appendChild(o);
+    }
+    if(d.returncode!==0){
+      const rc=document.createElement('div');
+      rc.className='t-rc';
+      rc.textContent=`[exit ${d.returncode}]`;
+      out.appendChild(rc);
+    }
+  }catch(e){
+    const er=document.createElement('div');
+    er.className='t-err';
+    er.textContent='error: '+e;
+    out.appendChild(er);
+  }
+  _termBusy=false;
+  out.scrollTop=out.scrollHeight;
+  document.getElementById('term-input').focus();
+}
+
+function _esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 </script>
 
 </body></html>"""
@@ -1422,6 +1533,38 @@ def _system_info():
         'repo': BASE,
         'port': PORT,
     }
+
+
+def _terminal_run(body):
+    import re, time
+    cmd = str(body.get('cmd', '')).strip()
+    if not cmd:
+        return {'output': '', 'returncode': 0}
+    timeout = min(int(body.get('timeout', 15)), 30)
+    env = {**os.environ, 'TERM': 'xterm-256color', 'HOME': '/home/dob',
+           'PATH': '/home/dob/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'}
+    t0 = time.monotonic()
+    try:
+        proc = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True,
+            timeout=timeout, cwd=BASE, env=env
+        )
+        raw = (proc.stdout or '') + (proc.stderr or '')
+        rc = proc.returncode
+    except subprocess.TimeoutExpired:
+        raw = f'[timeout after {timeout}s]'
+        rc = -1
+    except Exception as exc:
+        raw = f'[error: {exc}]'
+        rc = -1
+    # strip ANSI escape codes
+    ansi_escape = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    output = ansi_escape.sub('', raw).rstrip()
+    # truncate very long output
+    lines = output.splitlines()
+    if len(lines) > 200:
+        output = '\n'.join(['[... truncated, showing last 200 lines ...]'] + lines[-200:])
+    return {'output': output, 'returncode': rc, 'elapsed': round(time.monotonic()-t0, 2)}
 
 
 def _system_action(body):
@@ -1815,6 +1958,8 @@ class Handler(BaseHTTPRequestHandler):
         elif p.path == '/api/system-action':
             msg = _system_action(body)
             self._json({'ok': True, 'msg': msg})
+        elif p.path == '/api/terminal':
+            self._json(_terminal_run(body))
         else:
             self._send(404, 'text/plain', b'not found')
 
