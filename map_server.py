@@ -243,7 +243,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 <div id="tab-map" class="active">
   <div id="side">
     <h1>MAP EDITOR</h1>
-    <button id="mapmode-btn" onclick="toggleMapMode()" style="letter-spacing:2px;margin-bottom:6px">[ MAP MODE OFF ]</button>
+    <button id="mapmode-btn" onclick="toggleMapMode()" style="letter-spacing:2px;margin-bottom:6px">[ PREVIEW LIVE ]</button>
     <div id="slist"></div>
     <button class="btn-ok" onclick="addSurf()">+ NEW SURFACE</button>
     <div id="props">
@@ -447,25 +447,41 @@ const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22
 let activeTab='map';
 function switchTab(t){
   if(activeTab==='map'&&t!=='map'){
+    // leaving MAP tab → always restore projection to live visuals
     clearMapCursor();
-    if(mapModeActive){
-      mapModeActive=false;
-      const btn=document.getElementById('mapmode-btn');
-      if(btn){btn.textContent='[ MAP MODE OFF ]';btn.style.borderColor='';btn.style.color='';}
-      fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map_mode:false})}).catch(()=>{});
-    }
+    mapModeActive=false;
+    fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({map_mode:false,map_cursor_x:null,map_cursor_y:null})}).catch(()=>{});
+    _updateMapBtn();
   }
   activeTab=t;
   ['map','zones','ctrl','media','outputs','help'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('btn-'+n).classList.toggle('active',t===n);
   });
-  if(t==='map'){resize();}
+  if(t==='map'){resize();_enterMapTab();}
   if(t==='ctrl'){startCtrlPoll();}
   if(t==='zones'){fetchMedia().then(()=>zonesInit());}
   if(t==='media'){mediaLoad();mediaStatusPoll();}
   if(t==='outputs'){outputsLoad();}
   if(t==='help'){helpLoad();}
+}
+function _enterMapTab(){
+  mapModeActive=true;
+  _updateMapBtn();
+  fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({map_mode:true,map_selected:sel})}).catch(()=>{});
+}
+function _updateMapBtn(){
+  const btn=document.getElementById('mapmode-btn');
+  if(!btn)return;
+  if(mapModeActive){
+    btn.textContent='[ PREVIEW LIVE ]';
+    btn.style.color='#44ff88';btn.style.borderColor='#44ff88';
+  }else{
+    btn.textContent='[ SHOW MAP VIEW ]';
+    btn.style.color='#ff4466';btn.style.borderColor='#ff4466';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -488,7 +504,7 @@ function _fillVideoSelects(){
   if(el){const cur=el.value;el.innerHTML=videoOpts;el.value=cur;}
 }
 
-window.onload=()=>{resize();fetchMedia();fetchModes().then(()=>fetchFiles().then(()=>load()))};
+window.onload=()=>{resize();fetchMedia();fetchModes().then(()=>fetchFiles().then(()=>load()));_enterMapTab();};
 window.onresize=()=>{if(activeTab==='map')resize()};
 document.addEventListener('keydown',e=>{
   if(activeTab!=='map')return;
@@ -556,10 +572,7 @@ function resetCorn(){
 let mapModeActive=false;
 function toggleMapMode(){
   mapModeActive=!mapModeActive;
-  const btn=document.getElementById('mapmode-btn');
-  btn.textContent=mapModeActive?'[ MAP MODE ON ]':'[ MAP MODE OFF ]';
-  btn.style.borderColor=mapModeActive?'#44ff88':'';
-  btn.style.color=mapModeActive?'#44ff88':'';
+  _updateMapBtn();
   const patch={map_mode:mapModeActive};
   if(mapModeActive)patch.map_selected=sel;
   fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).catch(()=>{});
