@@ -470,8 +470,8 @@ scripts/git-sync.sh "short commit message"
 
 The script stages repo changes, commits, pushes the current branch, and prints
 the final git status. Runtime files such as `control.json`, `status.json`,
-`display_assign.json`, media uploads, temp files, and Python caches should stay
-ignored by `.gitignore`.
+`display_assign.json`, `cues.json`, media uploads, temp files, and Python caches
+should stay ignored by `.gitignore`.
 
 ## Repository Layout
 

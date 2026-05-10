@@ -9,4 +9,5 @@ __pycache__/
 *.tmp
 .claude/
 display_assign.json
+cues.json
 media/
