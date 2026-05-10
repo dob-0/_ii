@@ -1128,6 +1128,17 @@ ii attach</div>
       </div>
     </div>
     <div class="help-section">
+      <h3>RESTART SERVICES</h3>
+      <div class="help-actions">
+        <button class="cbtn" onclick="restartProgram('vis')">RESTART VISUALS</button>
+        <button class="cbtn" onclick="restartProgram('ctrl')">RESTART CTRL</button>
+        <button class="cbtn" onclick="restartProgram('web')">RESTART WEB</button>
+        <button class="cbtn" onclick="restartProgram('x')">RESTART X</button>
+        <button class="cbtn" onclick="restartProgram('all')">RESTART ALL</button>
+      </div>
+      <div class="out-status" id="help-restart-status">Use these to apply changes without rebooting Debian.</div>
+    </div>
+    <div class="help-section">
       <h3>EMERGENCY</h3>
       <div class="help-code">ii restart x
 ii restart vis
@@ -1309,6 +1320,27 @@ async function helpLoad(){
     document.getElementById('help-displays').textContent=(disp.displays||[]).filter(d=>d.connected).map(d=>`${d.name} ${d.resolution||'off'}`).join(' · ')||'none';
   }catch(e){}
 }
+
+async function restartProgram(target){
+  const loud = target === 'x' || target === 'all';
+  if(loud && !confirm('This will restart running show processes. Continue?'))return;
+  const status = document.getElementById('help-restart-status');
+  status.textContent = 'sending restart request...';
+  try{
+    const r = await fetch('/api/system-action', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'restart', target})
+    });
+    const d = await r.json();
+    status.textContent = d.msg || ('restart requested: ' + target);
+    if(target === 'web' || target === 'all'){
+      setTimeout(() => { status.textContent += ' (portal may reconnect)'; }, 120);
+    }
+  }catch(e){
+    status.textContent = 'error: ' + e;
+  }
+}
 </script>
 
 </body></html>"""
@@ -1395,6 +1427,37 @@ def _system_info():
         'repo': BASE,
         'port': PORT,
     }
+
+    def _system_action(body):
+      action = str(body.get('action', '')).strip().lower()
+      target = str(body.get('target', '')).strip().lower()
+      if action != 'restart':
+        return 'unsupported action'
+
+      helper = '/home/dob/bin/ii'
+      if not os.path.exists(helper):
+        return 'restart helper not found: /home/dob/bin/ii'
+
+      aliases = {
+        'visuals': 'vis',
+        'vis': 'vis',
+        'controller': 'ctrl',
+        'ctrl': 'ctrl',
+        'web': 'web',
+        'x': 'x',
+        'all': 'x',
+      }
+      resolved = aliases.get(target)
+      if not resolved:
+        return 'unknown restart target'
+
+      try:
+        subprocess.Popen([helper, 'restart', resolved],
+                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        label = 'full show' if target == 'all' else resolved
+        return f'restart requested: {label}'
+      except Exception as exc:
+        return f'restart failed: {exc}'
 
 def _get_display_names(displays):
     laptop = projector = None
@@ -1720,6 +1783,9 @@ class Handler(BaseHTTPRequestHandler):
         elif p.path == '/api/output-setup':
             msg = _apply_output_setup(body)
             self._json({'ok': True, 'msg': msg})
+        elif p.path == '/api/system-action':
+          msg = _system_action(body)
+          self._json({'ok': True, 'msg': msg})
         else:
             self._send(404, 'text/plain', b'not found')
 
