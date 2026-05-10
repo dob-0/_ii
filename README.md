@@ -157,6 +157,19 @@ ii restart ctrl            # restart only controller
 ii restart web             # restart only web portal
 ```
 
+One-command Debian update + smart restart:
+
+```bash
+scripts/update-and-restart.sh
+```
+
+Optional flags:
+
+```bash
+scripts/update-and-restart.sh --dry-run   # show what would restart
+scripts/update-and-restart.sh --force-x   # always restart full X layout
+```
+
 Attach to the controller directly:
 
 ```bash
@@ -464,20 +477,34 @@ Need a clean blank screen:
 
 ## Live Update Workflow
 
-Edit on laptop, push, then pull on the Debian machine:
+Edit on laptop, push, then run one command on the Debian machine:
 
 ```bash
 # laptop
 scripts/git-sync.sh "describe the change"
 
 # debian
-ii update
+scripts/update-and-restart.sh
 ```
 
-During development or rehearsal:
+What this does:
+
+- fetches and fast-forwards to latest `origin/main`
+- detects changed files
+- restarts only the affected components (`vis`, `ctrl`, `web`)
+- restarts full `x` layout when display/system files changed
+
+During development or rehearsal you can still use:
 
 ```bash
 ii watch 10
+```
+
+Then trigger smart restart manually after a pull when needed:
+
+```bash
+scripts/update-and-restart.sh --dry-run
+scripts/update-and-restart.sh
 ```
 
 ## Git Sync
