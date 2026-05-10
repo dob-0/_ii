@@ -11,7 +11,7 @@ import time
 
 from architecture import CONFIG_PATH, CTRL_PATH, STATUS_PATH, DEFAULTS, discover_modes, load_json, save_json_atomic
 from map_engine import load_mappings, render_zones
-from modes.base import C, ESC, HIDE, Mode, PALETTES, RESET, SHOW, color_key, mv
+from modes.base import C, ESC, HIDE, Mode, PALETTES, RESET, SHOW, bresenham, color_key, mv
 
 BASE = os.path.dirname(__file__)
 MODES_DIR = os.path.join(BASE, 'modes')
@@ -250,6 +250,93 @@ class Engine:
             if ch != ' ':
                 self.buf[cy][cx + x] = (ch, col)
 
+    def _draw_map_cursor(self):
+        mcx = self.ctrl.get('map_cursor_x')
+        mcy = self.ctrl.get('map_cursor_y')
+        if mcx is None or mcy is None:
+            return
+        try:
+            tx = int(float(mcx) * (self.w - 1))
+            ty = int(float(mcy) * (self.render_h - 1))
+        except Exception:
+            return
+        if not (0 <= tx < self.w and 0 <= ty < self.render_h):
+            return
+        line_col = C['dim']
+        center_col = C['white']
+        for x in range(self.w):
+            if x != tx:
+                self.buf[ty][x] = ('─', line_col)
+        for y in range(self.render_h):
+            if y != ty:
+                self.buf[y][tx] = ('│', line_col)
+        self.buf[ty][tx] = ('╋', center_col)
+
+    _MAP_SURF_COLORS = ['cyan', 'yellow', 'magenta', 'green', 'red', 'blue']
+
+    def _render_map_view(self):
+        self._clear_buf(self.buf)
+        w, h = self.w, self.render_h
+        # subtle reference grid: thirds + border
+        gc = C['dim']
+        for gx in [0, w // 3, 2 * w // 3, w - 1]:
+            for gy in range(h):
+                if self.buf[gy][gx] is None:
+                    self.buf[gy][gx] = ('│' if gx not in (0, w - 1) else '│', gc)
+        for gy in [0, h // 3, 2 * h // 3, h - 1]:
+            for gx in range(w):
+                if self.buf[gy][gx] is None:
+                    self.buf[gy][gx] = ('─' if gy not in (0, h - 1) else '─', gc)
+
+        mapping = self._active_mapping()
+        if not mapping:
+            msg = 'NO MAPPING ACTIVE'
+            mx = max(0, (w - len(msg)) // 2)
+            for i, ch in enumerate(msg):
+                if mx + i < w:
+                    self.buf[h // 2][mx + i] = (ch, gc)
+            return
+
+        surfaces = mapping.get('surfaces') or []
+        try:
+            selected = int(self.ctrl.get('map_selected', -1))
+        except Exception:
+            selected = -1
+
+        for si, surf in enumerate(surfaces):
+            corners = surf.get('corners', [])
+            if len(corners) < 4:
+                continue
+            is_sel = si == selected
+            col = C['white'] if is_sel else C[self._MAP_SURF_COLORS[si % len(self._MAP_SURF_COLORS)]]
+            edge_ch = '▓' if is_sel else '░'
+
+            pts = []
+            for nx, ny in corners:
+                pts.append((int(float(nx) * (w - 1)), int(float(ny) * (h - 1))))
+
+            for i in range(4):
+                x0, y0 = pts[i]
+                x1, y1 = pts[(i + 1) % 4]
+                for bx, by in bresenham(x0, y0, x1, y1):
+                    if 0 <= bx < w and 0 <= by < h:
+                        self.buf[by][bx] = (edge_ch, col)
+
+            for ci, (tx, ty) in enumerate(pts):
+                if 0 <= tx < w and 0 <= ty < h:
+                    self.buf[ty][tx] = ('◆' if is_sel else '·', C['white'])
+                if is_sel and 0 <= tx + 1 < w and 1 <= ty < h:
+                    self.buf[ty - 1][tx + 1] = (str(ci + 1), col)
+
+            cx_t = sum(p[0] for p in pts) // 4
+            cy_t = sum(p[1] for p in pts) // 4
+            label = surf.get('id') or f'S{si}'
+            lx = max(0, cx_t - len(label) // 2)
+            if 0 <= cy_t < h:
+                for i, ch in enumerate(label):
+                    if 0 <= lx + i < w:
+                        self.buf[cy_t][lx + i] = (ch, col)
+
     def run(self):
         sys.stdout.write(HIDE + CLEAR)
         prev_mode = self.mode
@@ -337,32 +424,36 @@ class Engine:
                     self._map_reload_frame = self.frame
 
                 t_now = time.time() - self.t0
-                mapping = self._active_mapping()
-                if mapping and render_zones(self.buf, self.w, self.render_h, self.modes, self.mode, mapping, merged, self.pal, syms, t_now, self.frame):
-                    pass  # zones rendered directly into self.buf
+                if c.get('map_mode'):
+                    self._render_map_view()
                 else:
-                    self.modes[self.mode].render(self.buf_a, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
-                    if self.layer_b_enabled:
-                        self._clear_buf(self.buf_b)
-                        self.modes[self.mode_b].render(self.buf_b, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
-                        self._composite_ab()
+                    mapping = self._active_mapping()
+                    if mapping and render_zones(self.buf, self.w, self.render_h, self.modes, self.mode, mapping, merged, self.pal, syms, t_now, self.frame):
+                        pass
                     else:
-                        for y in range(self.render_h):
-                            self.buf[y][:] = self.buf_a[y][:]
-                bpm_val = float(merged.get('bpm', 140))
-                beat_phase = (t_now * bpm_val / 60.0) % 1.0
-                audio_peak = float(merged.get('audio_peak', 0.0) or 0.0)
-                beat_kick = max(0.0, 1.0 - beat_phase * 5.0) if beat_phase < 0.2 else 0.0
-                zoom = 1.0 + beat_kick * 0.07 + audio_peak * 0.09
-                if zoom > 1.005:
-                    self._zoom_buf(zoom)
-
-                if self._trans_frames > 0:
-                    self._apply_transition_overlay()
+                        self.modes[self.mode].render(self.buf_a, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
+                        if self.layer_b_enabled:
+                            self._clear_buf(self.buf_b)
+                            self.modes[self.mode_b].render(self.buf_b, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
+                            self._composite_ab()
+                        else:
+                            for y in range(self.render_h):
+                                self.buf[y][:] = self.buf_a[y][:]
+                    bpm_val = float(merged.get('bpm', 140))
+                    beat_phase = (t_now * bpm_val / 60.0) % 1.0
+                    audio_peak = float(merged.get('audio_peak', 0.0) or 0.0)
+                    beat_kick = max(0.0, 1.0 - beat_phase * 5.0) if beat_phase < 0.2 else 0.0
+                    zoom = 1.0 + beat_kick * 0.07 + audio_peak * 0.09
+                    if zoom > 1.005:
+                        self._zoom_buf(zoom)
+                    if self._trans_frames > 0:
+                        self._apply_transition_overlay()
 
                 flash_text = c.get('flash_text', '')
                 if c.get('flash_active') and flash_text:
                     self._flash(flash_text)
+
+                self._draw_map_cursor()
 
                 sys.stdout.write(self._render_buffer())
                 sys.stdout.flush()

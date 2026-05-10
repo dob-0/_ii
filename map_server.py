@@ -248,6 +248,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 <div id="tab-map" class="active">
   <div id="side">
     <h1>MAP EDITOR</h1>
+    <button id="mapmode-btn" onclick="toggleMapMode()" style="letter-spacing:2px;margin-bottom:6px">[ MAP MODE OFF ]</button>
     <div id="slist"></div>
     <button class="btn-ok" onclick="addSurf()">+ NEW SURFACE</button>
     <div id="props">
@@ -446,6 +447,15 @@ const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22
 // ══════════════════════════════════════════════════════════════
 let activeTab='map';
 function switchTab(t){
+  if(activeTab==='map'&&t!=='map'){
+    clearMapCursor();
+    if(mapModeActive){
+      mapModeActive=false;
+      const btn=document.getElementById('mapmode-btn');
+      if(btn){btn.textContent='[ MAP MODE OFF ]';btn.style.borderColor='';btn.style.color='';}
+      fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map_mode:false})}).catch(()=>{});
+    }
+  }
   activeTab=t;
   ['map','zones','ctrl','media','outputs','help'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
@@ -527,7 +537,22 @@ function resetCorn(){
   const cx=0.1,cy=0.2,w=0.2,h=0.4;
   surfaces[sel].corners=[[cx,cy],[cx+w,cy],[cx+w,cy+h],[cx,cy+h]];draw();
 }
-function selSurf(i){sel=i;renderSide();draw()}
+let mapModeActive=false;
+function toggleMapMode(){
+  mapModeActive=!mapModeActive;
+  const btn=document.getElementById('mapmode-btn');
+  btn.textContent=mapModeActive?'[ MAP MODE ON ]':'[ MAP MODE OFF ]';
+  btn.style.borderColor=mapModeActive?'#44ff88':'';
+  btn.style.color=mapModeActive?'#44ff88':'';
+  const patch={map_mode:mapModeActive};
+  if(mapModeActive)patch.map_selected=sel;
+  fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).catch(()=>{});
+}
+function _syncMapSelected(){
+  if(mapModeActive)fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map_selected:sel})}).catch(()=>{});
+}
+
+function selSurf(i){sel=i;renderSide();draw();_syncMapSelected()}
 function uprop(k,v){if(sel<0)return;surfaces[sel][k]=v;renderSide();draw()}
 
 function renderSide(){
@@ -618,16 +643,29 @@ canvas.addEventListener('mousedown',e=>{
   const s=hitSurf(mx,my);
   if(s>=0){sel=s;renderSide();draw()}else{sel=-1;renderSide();draw()}
 });
+let _cursorThrottle=null;
+function sendMapCursor(nx,ny){
+  if(_cursorThrottle)return;
+  _cursorThrottle=setTimeout(()=>{_cursorThrottle=null},50);
+  fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({map_cursor_x:nx,map_cursor_y:ny})}).catch(()=>{});
+}
+function clearMapCursor(){
+  fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({map_cursor_x:null,map_cursor_y:null})}).catch(()=>{});
+}
+
 canvas.addEventListener('mousemove',e=>{
   const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   const[nx,ny]=c2s(mx,my);
   document.getElementById('coords').textContent=`${(nx*OW).toFixed(0)}, ${(ny*OH).toFixed(0)} px  (${nx.toFixed(3)}, ${ny.toFixed(3)})`;
+  sendMapCursor(Math.max(0,Math.min(1,nx)),Math.max(0,Math.min(1,ny)));
   if(!drag)return;
   surfaces[drag.s].corners[drag.c]=[Math.max(0,Math.min(1,nx)),Math.max(0,Math.min(1,ny))];
   draw();
 });
 canvas.addEventListener('mouseup',()=>{if(drag){save();drag=null}});
-canvas.addEventListener('mouseleave',()=>{drag=null});
+canvas.addEventListener('mouseleave',()=>{drag=null;clearMapCursor()});
 
 function st(msg){document.getElementById('st').textContent=msg}
 
@@ -1465,17 +1503,18 @@ def _system_info():
         'port': PORT,
     }
 
-    def _system_action(body):
-      action = str(body.get('action', '')).strip().lower()
-      target = str(body.get('target', '')).strip().lower()
-      if action != 'restart':
+
+def _system_action(body):
+    action = str(body.get('action', '')).strip().lower()
+    target = str(body.get('target', '')).strip().lower()
+    if action != 'restart':
         return 'unsupported action'
 
-      helper = '/home/dob/bin/ii'
-      if not os.path.exists(helper):
+    helper = '/home/dob/bin/ii'
+    if not os.path.exists(helper):
         return 'restart helper not found: /home/dob/bin/ii'
 
-      aliases = {
+    aliases = {
         'visuals': 'vis',
         'vis': 'vis',
         'controller': 'ctrl',
@@ -1483,18 +1522,19 @@ def _system_info():
         'web': 'web',
         'x': 'x',
         'all': 'x',
-      }
-      resolved = aliases.get(target)
-      if not resolved:
+    }
+    resolved = aliases.get(target)
+    if not resolved:
         return 'unknown restart target'
 
-      try:
+    try:
         subprocess.Popen([helper, 'restart', resolved],
-                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         label = 'full show' if target == 'all' else resolved
         return f'restart requested: {label}'
-      except Exception as exc:
+    except Exception as exc:
         return f'restart failed: {exc}'
+
 
 def _get_display_names(displays):
     laptop = projector = None
@@ -1853,8 +1893,8 @@ class Handler(BaseHTTPRequestHandler):
             msg = _apply_output_setup(body)
             self._json({'ok': True, 'msg': msg})
         elif p.path == '/api/system-action':
-          msg = _system_action(body)
-          self._json({'ok': True, 'msg': msg})
+            msg = _system_action(body)
+            self._json({'ok': True, 'msg': msg})
         else:
             self._send(404, 'text/plain', b'not found')
 
