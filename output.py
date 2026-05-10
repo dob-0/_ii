@@ -32,6 +32,14 @@ try:
 except ImportError:
     _HAS_NUMPY = False
 
+try:
+    import cv2 as _cv2
+    _HAS_CV2 = True
+except ImportError:
+    _HAS_CV2 = False
+
+MEDIA_DIR = os.path.join(BASE, 'media')
+
 ESC = '\033'
 ANSI_TO_RGB = {
     f'{ESC}[1;31m': (255,  85,  85),
@@ -47,6 +55,40 @@ ANSI_TO_RGB = {
 }
 _RGB_BLACK = (0, 0, 0)
 DEFAULT_MAP = os.path.join(BASE, 'mappings', 'fb_map.json')
+
+
+# ── Video player ──────────────────────────────────────────────────────────────
+
+class VideoPlayer:
+    """Wraps cv2.VideoCapture for a single looping video source."""
+
+    def __init__(self, path):
+        self._cap = None
+        if _HAS_CV2:
+            cap = _cv2.VideoCapture(path)
+            if cap.isOpened():
+                self._cap = cap
+
+    def read_frame(self, vw, vh):
+        """Return an (vh, vw, 3) uint8 RGB numpy array, or None."""
+        if self._cap is None:
+            return None
+        ok, frame = self._cap.read()
+        if not ok:
+            self._cap.set(_cv2.CAP_PROP_POS_FRAMES, 0)
+            ok, frame = self._cap.read()
+            if not ok:
+                return None
+        frame = _cv2.cvtColor(frame, _cv2.COLOR_BGR2RGB)
+        return _cv2.resize(frame, (vw, vh))
+
+    def close(self):
+        if self._cap is not None:
+            self._cap.release()
+            self._cap = None
+
+    def __del__(self):
+        self.close()
 
 
 # ── Map geometry ──────────────────────────────────────────────────────────────
@@ -82,6 +124,7 @@ def load_surfaces(path, sw, sh):
         if not s.get('enabled', True):
             continue
         surfs.append({'id': s.get('id', 'surf'), 'mode': s.get('mode'),
+                      'video': s.get('video') or '',
                       'phase': float(s.get('phase', 0.0)),
                       'corners': _pixel_corners(s, sw, sh)})
 
@@ -156,6 +199,7 @@ class OutputEngine:
         self._map_mtime = None
         self.surfaces   = []
         self.luts       = []
+        self._video_players = {}   # surf_id → VideoPlayer
 
         pygame.init()
         self._init_display()
@@ -203,6 +247,7 @@ class OutputEngine:
                 self.luts.append(build_lut_numpy(s, self.vw, self.vh, self.sw, self.sh))
             else:
                 self.luts.append(build_lut_poly(s, self.vw, self.vh))
+        self._update_video_players()
         self._map_mtime = mtime
 
     def _clear(self, buf):
@@ -254,6 +299,26 @@ class OutputEngine:
         arr[active] = color_arr[vy_t[active], vx_t[active]]
         del arr
 
+    def _update_video_players(self):
+        needed = {s['id']: s['video'] for s in self.surfaces if s.get('video')}
+        for sid in list(self._video_players):
+            if sid not in needed:
+                self._video_players[sid].close()
+                del self._video_players[sid]
+        for sid, fname in needed.items():
+            if sid not in self._video_players:
+                path = os.path.join(MEDIA_DIR, os.path.basename(fname))
+                if os.path.isfile(path):
+                    self._video_players[sid] = VideoPlayer(path)
+
+    def _blit_video(self, lut_data, video_frame, master_dim):
+        lut_vy, lut_vx, valid = lut_data
+        arr = pygame.surfarray.pixels3d(self._np_surf)
+        vy_t, vx_t, valid_t = lut_vy.T, lut_vx.T, valid.T
+        active = valid_t & (np.random.random((self.sw, self.sh)) < master_dim) if master_dim < 0.999 else valid_t
+        arr[active] = video_frame[vy_t[active], vx_t[active]]
+        del arr
+
     def _blit_poly(self, quads, master_dim):
         scr = self.screen
         for vy in range(self.vh):
@@ -280,6 +345,12 @@ class OutputEngine:
         if _HAS_NUMPY:
             self._np_surf.fill((0, 0, 0))
             for surf, lut_data in zip(self.surfaces, self.luts):
+                player = self._video_players.get(surf['id']) if surf.get('video') else None
+                if player is not None:
+                    vf = player.read_frame(self.vw, self.vh)
+                    if vf is not None:
+                        self._blit_video(lut_data, vf, master_dim)
+                        continue
                 spec = surf['mode']
                 midx = max(0, min(len(self.modes)-1, int(spec))) if spec is not None else mode_idx
                 self._fill_vbuf(midx, mode_b_idx, layer_b, alpha,

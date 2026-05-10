@@ -253,6 +253,10 @@ canvas{cursor:crosshair;image-rendering:pixelated}
       <select id="p-mode" onchange="uprop('mode',this.value==='null'?null:+this.value)">
         <option value="null">∅  null — follow active</option>
       </select>
+      <label>VIDEO FILE (overrides mode if set)</label>
+      <select id="p-video" onchange="uprop('video',this.value||null)">
+        <option value="">none — use mode</option>
+      </select>
       <label>PHASE  (seconds time-offset)</label>
       <input id="p-phase" type="number" step="0.1" oninput="uprop('phase',+this.value)">
       <label>ENABLED</label>
@@ -458,7 +462,7 @@ function switchTab(t){
   });
   if(t==='map'){resize();}
   if(t==='ctrl'){startCtrlPoll();}
-  if(t==='zones'){zonesInit();}
+  if(t==='zones'){fetchMedia().then(()=>zonesInit());}
   if(t==='media'){mediaLoad();mediaStatusPoll();}
   if(t==='outputs'){outputsLoad();}
   if(t==='help'){helpLoad();}
@@ -467,7 +471,24 @@ function switchTab(t){
 // ══════════════════════════════════════════════════════════════
 //  MAP TAB — original logic (unchanged)
 // ══════════════════════════════════════════════════════════════
-window.onload=()=>{resize();fetchModes().then(()=>fetchFiles().then(()=>load()))};
+let MEDIA_FILES=[];
+async function fetchMedia(){
+  try{
+    const r=await fetch('/api/media');
+    MEDIA_FILES=await r.json();
+    _fillVideoSelects();
+  }catch(e){}
+}
+function _isVideoFile(name){return/\.(mp4|mkv|avi|mov|webm|ts|m4v)$/i.test(name);}
+function _fillVideoSelects(){
+  const videoOpts='<option value="">none — use mode</option>'+
+    MEDIA_FILES.filter(f=>_isVideoFile(f.name))
+      .map(f=>`<option value="${f.name}">▶ ${f.name}</option>`).join('');
+  const el=document.getElementById('p-video');
+  if(el){const cur=el.value;el.innerHTML=videoOpts;el.value=cur;}
+}
+
+window.onload=()=>{resize();fetchMedia();fetchModes().then(()=>fetchFiles().then(()=>load()))};
 window.onresize=()=>{if(activeTab==='map')resize()};
 document.addEventListener('keydown',e=>{
   if(activeTab!=='map')return;
@@ -564,6 +585,7 @@ function renderSide(){
     p.style.display='flex';const s=surfaces[sel];
     document.getElementById('p-id').value=s.id||'';
     document.getElementById('p-mode').value=s.mode===null?'null':s.mode;
+    document.getElementById('p-video').value=s.video||'';
     document.getElementById('p-phase').value=s.phase||0;
     document.getElementById('p-en').value=s.enabled===false?'false':'true';
   }else p.style.display='none';
@@ -1031,10 +1053,14 @@ function renderZonesGrid(){
 
     const modeOpts='<option value="null"'+(s.mode===null?' selected':'')+'>∅  follow active</option>'+
       MODES.map((n,mi)=>`<option value="${mi}"${s.mode===mi?' selected':''}>${mi}  ${n}</option>`).join('');
+    const videoOpts='<option value="">none — use mode</option>'+
+      MEDIA_FILES.filter(f=>_isVideoFile(f.name))
+        .map(f=>`<option value="${f.name}"${s.video===f.name?' selected':''}>▶ ${f.name}</option>`).join('');
 
     card.innerHTML=`
       <div class="zone-id" style="color:${col}">${s.id||'SURF-'+i}</div>
       <select onchange="zoneSet(${i},'mode',this.value==='null'?null:+this.value)">${modeOpts}</select>
+      <select onchange="zoneSet(${i},'video',this.value||null)" style="font-size:9px">${videoOpts}</select>
       <label class="toggle-wrap">
         <input type="checkbox" class="toggle" ${s.enabled!==false?'checked':''}
                onchange="zoneSet(${i},'enabled',this.checked)">
