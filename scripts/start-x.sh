@@ -52,6 +52,9 @@ wmctrl -r '_ii controller' -e "0,${LX},${LY},${LW},${LH}" 2>/dev/null || true
 wmctrl -r '_ii controller' -b add,maximized_vert,maximized_horz 2>/dev/null || true
 
 VIS_TITLE='ii-VISUALS'
+DISPLAY=:0 XAUTHORITY=/home/dob/.Xauthority \
+  /usr/bin/python3 /home/dob/_ii/window.py >/tmp/ii-window.log 2>&1 &
+
 echo "waiting for $VIS_TITLE window..."
 for i in $(seq 1 30); do
     sleep 1

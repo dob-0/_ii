@@ -189,7 +189,9 @@ def _select_monitor(monitors, monitor_name):
     if not monitors:
         return None
     if monitor_name and monitor_name not in ('auto', AUTO_SECOND_MONITOR):
-        return monitors.get(monitor_name)
+        selected = monitors.get(monitor_name)
+        if selected:
+            return selected
 
     ordered = sorted(monitors.items(), key=lambda item: (item[1]['x'], item[1]['y'], item[0]))
     if len(ordered) == 1:

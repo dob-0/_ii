@@ -21,6 +21,6 @@
   "visuals_fullscreen": true,
   "visuals_window_title": "ii-VISUALS",
   "visuals_force_x11": false,
-  "visuals_monitor": "HDMI-A-1",
+  "visuals_monitor": "auto-second",
   "visuals_geometry": ""
 }
