@@ -183,23 +183,44 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 #out-x-badge.ok{color:var(--accent3)}
 #out-x-badge.warn{color:var(--accent2)}
 #out-strip-status{margin-left:auto;color:#555;font-size:10px}
-#out-main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;max-width:820px}
-#out-assign-area{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
-.out-role-label{font-size:9px;letter-spacing:2px;color:var(--text4);margin-bottom:8px}
+#out-main{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-width:1100px;width:100%}
+.out-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:12px 14px}
+.out-section-hdr{font-size:9px;letter-spacing:2px;color:var(--text4);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.out-auto-btn{font-size:9px;letter-spacing:1px;padding:2px 8px;background:transparent;border:1px solid #1c3a1c;color:#3d6a3d;cursor:pointer;font-family:monospace}
+.out-auto-btn:hover{color:#55cc55;border-color:#2a5a2a}
+#out-assign-area{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.out-role-label{font-size:9px;letter-spacing:2px;color:var(--text4);margin-bottom:6px}
 .out-disp-btns{display:flex;flex-direction:column;gap:5px}
-.out-disp-btn{background:#111;border:1px solid #222;border-radius:3px;padding:9px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s;display:flex;flex-direction:column;gap:2px}
+.out-disp-btn{background:#111;border:1px solid #222;border-radius:3px;padding:8px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s;display:flex;flex-direction:column;gap:2px}
 .out-disp-btn:hover{border-color:#444}
 .out-disp-btn.active{border-color:var(--accent3);background:#0a1a0a}
 .out-disp-btn .dname{font-size:11px;color:var(--text)}
 .out-disp-btn.active .dname{color:var(--accent3)}
 .out-disp-btn .dres{color:#555;font-size:9px}
-#out-map-area{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
-#out-map-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+#out-map-btns{display:flex;flex-wrap:wrap;gap:6px}
 .out-map-btn{background:#111;border:1px solid #222;border-radius:3px;padding:8px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s}
 .out-map-btn:hover{border-color:#444}
 .out-map-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
 .msurfs{font-size:9px;color:#555;margin-top:2px}
 .out-map-btn.active .msurfs{color:#3a6}
+/* source cards */
+#out-sources-area{display:flex;flex-wrap:wrap;gap:8px}
+.src-card{background:#111;border:1px solid #1e1e1e;border-radius:3px;padding:10px 12px;min-width:140px;flex:1;max-width:260px;display:flex;flex-direction:column;gap:7px}
+.src-card-id{font-size:9px;letter-spacing:2px;color:#555}
+.src-type-row{display:flex;gap:4px}
+.src-type-btn{font-size:9px;letter-spacing:1px;padding:3px 8px;border:1px solid #222;background:#0a0a0a;color:#555;cursor:pointer;font-family:monospace;flex:1}
+.src-type-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
+.src-mode-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.src-mp-btn{font-size:8px;padding:3px 1px;border:1px solid #1a1a1a;background:#0a0a0a;color:#555;cursor:pointer;font-family:monospace;text-align:center;overflow:hidden}
+.src-mp-btn:hover{color:var(--text);border-color:#333}
+.src-mp-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
+.src-video-sel{width:100%;font-size:10px;background:#0a0a0a;border:1px solid #1e1e1e;color:var(--text);padding:4px 4px}
+/* project */
+#out-proj-area{display:flex;flex-direction:column;gap:8px}
+.proj-row{display:flex;gap:8px;align-items:center}
+.proj-row input,.proj-row select{flex:1;background:#111;border:1px solid #222;color:var(--text);font:11px/1 monospace;padding:5px 8px}
+.proj-btn{font:10px/1 monospace;letter-spacing:1px;padding:5px 12px;background:transparent;border:1px solid #1c3a1c;color:#3d8a3d;cursor:pointer;white-space:nowrap}
+.proj-btn:hover{color:#55cc55;border-color:#2a5a2a}
 #out-action-area{display:flex;align-items:center;gap:14px;padding-top:2px}
 #out-apply-btn{padding:11px 28px;font-size:11px;letter-spacing:2px;border:1px solid #153a15;color:var(--green);background:var(--bg1);border-radius:3px;cursor:pointer;font-family:monospace;flex-shrink:0}
 #out-apply-btn:hover{background:#0a1a0a;border-color:#2a5a2a}
@@ -1135,19 +1156,34 @@ async function zonesSave(){
     <span id="out-strip-status"></span>
   </div>
   <div id="out-main">
-    <div id="out-assign-area">
-      <div>
-        <div class="out-role-label">CONTROLLER</div>
-        <div id="out-ctrl-btns" class="out-disp-btns"></div>
-      </div>
-      <div>
-        <div class="out-role-label">PROJECTOR</div>
-        <div id="out-vis-btns" class="out-disp-btns"></div>
+    <div class="out-section">
+      <div class="out-section-hdr">DISPLAYS <button class="out-auto-btn" onclick="autoAssignDisplays()">AUTO-DETECT</button></div>
+      <div id="out-assign-area">
+        <div><div class="out-role-label">CONTROLLER</div><div id="out-ctrl-btns" class="out-disp-btns"></div></div>
+        <div><div class="out-role-label">PROJECTOR</div><div id="out-vis-btns" class="out-disp-btns"></div></div>
       </div>
     </div>
-    <div id="out-map-area">
-      <div class="out-role-label">MAPPING</div>
+    <div class="out-section">
+      <div class="out-section-hdr">MAPPING</div>
       <div id="out-map-btns"></div>
+    </div>
+    <div class="out-section">
+      <div class="out-section-hdr">SOURCES</div>
+      <div id="out-sources-area"><div style="color:#333;font-size:10px;padding:4px">select a mapping to see surfaces</div></div>
+    </div>
+    <div class="out-section">
+      <div class="out-section-hdr">PROJECT</div>
+      <div id="out-proj-area">
+        <div class="proj-row">
+          <input id="proj-name" type="text" placeholder="project name…" autocomplete="off">
+          <button class="proj-btn" onclick="saveProject()">SAVE</button>
+        </div>
+        <div class="proj-row">
+          <select id="proj-load-sel"><option value="">— load project —</option></select>
+          <button class="proj-btn" onclick="loadProject()">LOAD</button>
+        </div>
+        <div id="proj-status" style="font-size:10px;color:#555;min-height:14px"></div>
+      </div>
     </div>
     <div id="out-action-area">
       <button id="out-apply-btn" onclick="applyOutputPlan()">APPLY TO STAGE</button>
@@ -1242,17 +1278,23 @@ ii stop</div>
 let outputsTimer=null;
 let outputApplyBusy=false;
 let selCtrl='', selVis='', selMapping=0, _outInited=false;
+let _lastOutState=null, _currentMappings=[], _currentMappingFile='';
+let _outModes=[], _surfSources={};
 
 async function outputsLoad(){
+  const [modesR]=await Promise.all([fetch('/api/modes')]);
+  _outModes=await modesR.json().catch(()=>[]);
   await refreshOutputs();
+  await _refreshProjects();
   clearInterval(outputsTimer);
-  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},3000);
+  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},4000);
 }
 
 async function refreshOutputs(){
   try{
     const r=await fetch('/api/output-setup');
     const d=await r.json();
+    _lastOutState=d;
     renderOutputs(d);
   }catch(e){
     const b=document.getElementById('out-x-badge');
@@ -1264,6 +1306,7 @@ function renderOutputs(d){
   const badge=document.getElementById('out-x-badge');
   if(badge){badge.textContent=d.x_running?'X11 ●':'X11 ✕';badge.className=d.x_running?'ok':'warn';}
   const displays=(d.displays||[]).filter(x=>x.connected);
+  _currentMappings=d.mappings||[];
   if(!_outInited){
     _outInited=true;
     selCtrl=d.assign?.ctrl||d.suggested_ctrl||displays[0]?.name||'';
@@ -1272,7 +1315,9 @@ function renderOutputs(d){
   }
   buildDispButtons('out-ctrl-btns',displays,selCtrl,n=>{selCtrl=n;checkSameDisp();});
   buildDispButtons('out-vis-btns',displays,selVis,n=>{selVis=n;checkSameDisp();});
-  buildMapButtons(d.mappings||[],selMapping);
+  _currentMappingFile=d.active_mapping_file||'';
+  buildMapButtons(_currentMappings,selMapping);
+  renderSourceCards(d.surfaces||[],_currentMappingFile);
   checkSameDisp();
 }
 
@@ -1297,6 +1342,17 @@ function buildDispButtons(id,displays,selected,onSelect){
   });
 }
 
+function autoAssignDisplays(){
+  if(!_lastOutState)return;
+  const sc=_lastOutState.suggested_ctrl, sv=_lastOutState.suggested_vis;
+  if(sc){selCtrl=sc;}
+  if(sv){selVis=sv;}
+  const displays=(_lastOutState.displays||[]).filter(d=>d.connected);
+  buildDispButtons('out-ctrl-btns',displays,selCtrl,n=>{selCtrl=n;checkSameDisp();});
+  buildDispButtons('out-vis-btns',displays,selVis,n=>{selVis=n;checkSameDisp();});
+  checkSameDisp();
+}
+
 function buildMapButtons(mappings,activeIdx){
   const box=document.getElementById('out-map-btns');
   if(!box)return;
@@ -1307,14 +1363,117 @@ function buildMapButtons(mappings,activeIdx){
     btn.className='out-map-btn'+(i===activeIdx?' active':'');
     const n=m.surfaces||0;
     btn.innerHTML=`${m.name||m.file}<div class="msurfs">${n} surface${n!==1?'s':''}</div>`;
-    btn.onclick=()=>{
+    btn.onclick=async()=>{
       selMapping=i;
+      _currentMappingFile=m.file;
       box.querySelectorAll('.out-map-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:i})}).catch(()=>{});
+      await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:i})}).catch(()=>{});
+      await refreshOutputs();
     };
     box.appendChild(btn);
   });
+}
+
+function renderSourceCards(surfaces, mappingFile){
+  const area=document.getElementById('out-sources-area');
+  if(!area)return;
+  if(!surfaces||!surfaces.length){
+    area.innerHTML='<div style="color:#333;font-size:10px;padding:4px">no surfaces in this mapping</div>';
+    return;
+  }
+  area.innerHTML='';
+  surfaces.forEach(s=>{
+    const id=s.id||'?';
+    const curMode=(s.mode!==null&&s.mode!==undefined)?parseInt(s.mode):null;
+    const curVideo=s.video||'';
+    const isVid=!!curVideo;
+
+    const card=document.createElement('div');
+    card.className='src-card';
+    card.dataset.id=id;
+
+    const hdr=document.createElement('div');
+    hdr.className='src-card-id';
+    hdr.textContent=id;
+    card.appendChild(hdr);
+
+    const typeRow=document.createElement('div');
+    typeRow.className='src-type-row';
+    const modeBtn=document.createElement('button');
+    modeBtn.className='src-type-btn'+(!isVid?' active':'');
+    modeBtn.textContent='MODE';
+    const vidBtn=document.createElement('button');
+    vidBtn.className='src-type-btn'+(isVid?' active':'');
+    vidBtn.textContent='VIDEO';
+    typeRow.append(modeBtn,vidBtn);
+    card.appendChild(typeRow);
+
+    // mode grid
+    const modePicker=document.createElement('div');
+    modePicker.className='src-mode-picker';
+    modePicker.style.display=isVid?'none':'';
+    (_outModes).forEach((m,i)=>{
+      const b=document.createElement('button');
+      b.className='src-mp-btn'+(curMode===i?' active':'');
+      b.textContent=m.length>5?m.slice(0,5):m;
+      b.title=m;
+      b.dataset.idx=i;
+      b.onclick=()=>{
+        _surfSources[id]={type:'mode',mode:i,video:''};
+        setSurfaceSource(mappingFile,id,'mode',i,'');
+        modePicker.querySelectorAll('.src-mp-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+      };
+      modePicker.appendChild(b);
+    });
+    card.appendChild(modePicker);
+
+    // video dropdown
+    const videoSel=document.createElement('select');
+    videoSel.className='src-video-sel';
+    videoSel.style.display=isVid?'':'none';
+    const emptyOpt=document.createElement('option');
+    emptyOpt.value='';emptyOpt.textContent='— none (use visuals) —';
+    videoSel.appendChild(emptyOpt);
+    (MEDIA_FILES||[]).filter(_isVideoFile).forEach(f=>{
+      const opt=document.createElement('option');
+      opt.value=f;opt.textContent=f;opt.selected=(f===curVideo);
+      videoSel.appendChild(opt);
+    });
+    videoSel.onchange=()=>{
+      const v=videoSel.value;
+      _surfSources[id]={type:'video',mode:null,video:v};
+      setSurfaceSource(mappingFile,id,'video',null,v);
+    };
+    card.appendChild(videoSel);
+
+    modeBtn.onclick=()=>{
+      modeBtn.classList.add('active');vidBtn.classList.remove('active');
+      modePicker.style.display='';videoSel.style.display='none';
+      const activeM=modePicker.querySelector('.src-mp-btn.active');
+      const mi=activeM?parseInt(activeM.dataset.idx):0;
+      _surfSources[id]={type:'mode',mode:mi,video:''};
+      setSurfaceSource(mappingFile,id,'mode',mi,'');
+    };
+    vidBtn.onclick=()=>{
+      vidBtn.classList.add('active');modeBtn.classList.remove('active');
+      videoSel.style.display='';modePicker.style.display='none';
+      const v=videoSel.value;
+      _surfSources[id]={type:'video',mode:null,video:v};
+      setSurfaceSource(mappingFile,id,'video',null,v);
+    };
+
+    area.appendChild(card);
+  });
+}
+
+async function setSurfaceSource(file,id,type,mode,video){
+  try{
+    await fetch('/api/surface-source',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({file,id,type,mode,video})});
+  }catch(e){}
 }
 
 async function applyOutputPlan(){
@@ -1343,6 +1502,78 @@ async function restartXLayout(){
     const d=await r.json();
     if(st){st.textContent=d.msg||'restart requested';setTimeout(()=>{st.textContent='';},4000);}
   }catch(e){if(st)st.textContent='error: '+e;}
+}
+
+// ── PROJECT SAVE / LOAD ───────────────────────────────────────────────────────
+async function saveProject(){
+  const name=document.getElementById('proj-name').value.trim();
+  if(!name){_projStatus('enter a project name');return;}
+  const sources={};
+  document.querySelectorAll('.src-card').forEach(card=>{
+    const id=card.dataset.id;
+    const isVid=card.querySelector('.src-type-btn:last-child').classList.contains('active');
+    if(isVid){
+      sources[id]={type:'video',video:card.querySelector('.src-video-sel').value};
+    } else {
+      const ab=card.querySelector('.src-mp-btn.active');
+      sources[id]={type:'mode',mode:ab?parseInt(ab.dataset.idx):null};
+    }
+  });
+  const body={name,display_ctrl:selCtrl,display_vis:selVis,mapping:_currentMappingFile,sources};
+  try{
+    const r=await fetch('/api/project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    _projStatus(d.msg||'saved');
+    await _refreshProjects(name);
+  }catch(e){_projStatus('error: '+e);}
+}
+
+async function loadProject(){
+  const name=document.getElementById('proj-load-sel').value;
+  if(!name){_projStatus('select a project');return;}
+  try{
+    const r=await fetch('/api/project?name='+encodeURIComponent(name));
+    const proj=await r.json();
+    if(!proj||proj.error){_projStatus('not found');return;}
+    if(proj.display_ctrl)selCtrl=proj.display_ctrl;
+    if(proj.display_vis)selVis=proj.display_vis;
+    if(proj.mapping){
+      const idx=_currentMappings.findIndex(m=>m.file===proj.mapping);
+      if(idx>=0){
+        selMapping=idx;_currentMappingFile=proj.mapping;
+        await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:idx})}).catch(()=>{});
+      }
+    }
+    if(proj.sources&&proj.mapping){
+      for(const [id,src] of Object.entries(proj.sources)){
+        await setSurfaceSource(proj.mapping,id,src.type,src.mode??null,src.video??'');
+      }
+    }
+    document.getElementById('proj-name').value=proj.name||name;
+    _outInited=false;
+    _projStatus('loaded: '+(proj.name||name));
+    await refreshOutputs();
+  }catch(e){_projStatus('error: '+e);}
+}
+
+async function _refreshProjects(selectName){
+  try{
+    const r=await fetch('/api/projects');
+    const names=await r.json();
+    const sel=document.getElementById('proj-load-sel');
+    const cur=selectName||sel.value;
+    sel.innerHTML='<option value="">— load project —</option>';
+    names.forEach(n=>{
+      const opt=document.createElement('option');
+      opt.value=n;opt.textContent=n;opt.selected=(n===cur);
+      sel.appendChild(opt);
+    });
+  }catch(e){}
+}
+
+function _projStatus(msg){
+  const el=document.getElementById('proj-status');
+  if(el){el.textContent=msg;setTimeout(()=>{if(el.textContent===msg)el.textContent='';},3500);}
 }
 
 async function helpLoad(){
@@ -1535,6 +1766,87 @@ def _system_info():
     }
 
 
+PROJECTS_DIR = os.path.join(BASE, 'projects')
+
+
+def _list_projects():
+    try:
+        os.makedirs(PROJECTS_DIR, exist_ok=True)
+        return sorted(f[:-5] for f in os.listdir(PROJECTS_DIR) if f.endswith('.json'))
+    except Exception:
+        return []
+
+
+def _save_project(body):
+    import re as _re
+    name = str(body.get('name', '')).strip()
+    if not name:
+        return 'name required'
+    if not _re.match(r'^[\w\- ]{1,50}$', name):
+        return 'invalid project name (alphanumeric, dash, space, max 50)'
+    os.makedirs(PROJECTS_DIR, exist_ok=True)
+    proj = {
+        'name': name,
+        'display_ctrl': str(body.get('display_ctrl', '') or ''),
+        'display_vis': str(body.get('display_vis', '') or ''),
+        'mapping': str(body.get('mapping', '') or ''),
+        'sources': body.get('sources') or {},
+    }
+    fname = _re.sub(r'[^\w\-]', '_', name) + '.json'
+    save_json_atomic(os.path.join(PROJECTS_DIR, fname), proj)
+    return f'saved: {name}'
+
+
+def _load_project(name):
+    import re as _re
+    fname = _re.sub(r'[^\w\-]', '_', name) + '.json'
+    path = os.path.join(PROJECTS_DIR, fname)
+    if os.path.exists(path):
+        return load_json(path, {})
+    # fallback: scan by name field
+    try:
+        for f in os.listdir(PROJECTS_DIR):
+            if f.endswith('.json'):
+                p = load_json(os.path.join(PROJECTS_DIR, f), {})
+                if p.get('name') == name:
+                    return p
+    except Exception:
+        pass
+    return {'error': 'not found'}
+
+
+def _set_surface_source(body):
+    mapping_file = os.path.basename(str(body.get('file', '') or ''))
+    surf_id = str(body.get('id', '') or '').strip()
+    source_type = str(body.get('type', 'mode')).strip()
+    mode_val = body.get('mode')
+    video_val = str(body.get('video', '') or '').strip()
+    if not mapping_file or not surf_id:
+        return 'missing file or id'
+    path = os.path.join(MAPPINGS_DIR, mapping_file)
+    if not os.path.exists(path):
+        return f'mapping not found: {mapping_file}'
+    data = load_json(path, {})
+    key = 'surfaces' if 'surfaces' in data else 'zones'
+    surfaces = data.get(key) or []
+    updated = False
+    for s in surfaces:
+        if s.get('id') == surf_id:
+            if source_type == 'video':
+                s['video'] = video_val
+                s['mode'] = None
+            else:
+                s['mode'] = int(mode_val) if mode_val is not None else None
+                s['video'] = ''
+            updated = True
+            break
+    if not updated:
+        return f'surface not found: {surf_id}'
+    data[key] = surfaces
+    save_json_atomic(path, data)
+    return 'ok'
+
+
 def _terminal_run(body):
     import re, time
     cmd = str(body.get('cmd', '')).strip()
@@ -1680,6 +1992,10 @@ def _output_setup_state():
       active_mapping_file = mappings[active_mapping]['file']
     else:
       active_mapping_file = ''
+    surfaces = []
+    if active_mapping_file:
+        mdata = load_json(os.path.join(MAPPINGS_DIR, active_mapping_file), {})
+        surfaces = mdata.get('surfaces') or mdata.get('zones') or []
     return {
         'displays': displays,
         'layout': _detect_layout(displays),
@@ -1689,6 +2005,7 @@ def _output_setup_state():
       'mappings': mappings,
       'active_mapping': active_mapping,
       'active_mapping_file': active_mapping_file,
+      'surfaces': surfaces,
         'ctrl': ctrl,
         'x_running': _x_running(),
         'display': ':0',
@@ -1874,6 +2191,11 @@ class Handler(BaseHTTPRequestHandler):
             self._json(_system_info())
         elif p.path == '/api/output-setup':
             self._json(_output_setup_state())
+        elif p.path == '/api/projects':
+            self._json(_list_projects())
+        elif p.path == '/api/project':
+            name = qs.get('name', [''])[0]
+            self._json(_load_project(name) if name else {'error': 'name required'})
         else:
             self._send(404, 'text/plain', b'not found')
 
@@ -1960,6 +2282,12 @@ class Handler(BaseHTTPRequestHandler):
             self._json({'ok': True, 'msg': msg})
         elif p.path == '/api/terminal':
             self._json(_terminal_run(body))
+        elif p.path == '/api/surface-source':
+            msg = _set_surface_source(body)
+            self._json({'ok': msg == 'ok', 'msg': msg})
+        elif p.path == '/api/project':
+            msg = _save_project(body)
+            self._json({'ok': True, 'msg': msg})
         else:
             self._send(404, 'text/plain', b'not found')
 
@@ -1990,5 +2318,6 @@ def _zone_to_surface(z):
 if __name__ == '__main__':
     os.makedirs(MAPPINGS_DIR, exist_ok=True)
     os.makedirs(MEDIA_DIR, exist_ok=True)
+    os.makedirs(PROJECTS_DIR, exist_ok=True)
     print(f'open on your laptop:  http://192.168.88.136:{PORT}')
     ThreadingHTTPServer(('0.0.0.0', PORT), Handler).serve_forever()
