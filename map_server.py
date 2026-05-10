@@ -176,40 +176,35 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 .alpha-row input[type=range]{width:100%;accent-color:var(--accent2)}
 
 /* ── OUTPUTS TAB ─────────────────────────────────────────────────────────── */
-#tab-outputs{flex-direction:column;overflow-y:auto;padding:16px;gap:0;background:var(--bg)}
+#tab-outputs{flex-direction:column;overflow:hidden;background:var(--bg)}
 #tab-outputs.active{display:flex}
-#outputs-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;max-width:1180px;margin:0 auto;width:100%}
-.out-section{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
-.out-section h3{margin:0 0 10px;font-size:10px;letter-spacing:2px;color:var(--text3)}
-.out-layout-btns{display:flex;gap:8px;flex-wrap:wrap}
-.out-btn{background:#1a1a1a;color:var(--text);border:1px solid #333;border-radius:3px;padding:7px 16px;font-family:monospace;font-size:11px;letter-spacing:1px;cursor:pointer}
-.out-btn:hover{border-color:var(--accent1);color:var(--accent1)}
-.out-btn.active{border-color:var(--accent2);color:var(--accent2);background:#0d1a0d}
-.out-status{margin-top:8px;font-size:10px;color:#555;min-height:14px}
-.out-disp-list{display:flex;flex-direction:column;gap:6px}
-.out-disp-row{display:flex;align-items:center;gap:10px;font-size:11px;padding:5px 8px;background:#111;border-radius:3px}
-.out-disp-dot{width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0}
-.out-disp-dot.on{background:#3a3}
-.out-disp-name{color:var(--text);font-weight:bold;min-width:100px}
-.out-disp-res{color:var(--text3)}
-.out-disp-pos{color:#444;font-size:10px}
-.out-assign-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.out-assign-card{background:#111;border:1px solid #2a2a2a;border-radius:3px;padding:12px;display:flex;flex-direction:column;gap:6px}
-.out-assign-label{font-size:9px;letter-spacing:2px;color:var(--text3)}
-.out-assign-disp{font-size:13px;color:var(--accent1);min-height:18px}
-.out-assign-btns{display:flex;gap:5px;flex-wrap:wrap}
-.out-assign-btns button{background:#1a1a1a;color:var(--text3);border:1px solid #2a2a2a;border-radius:2px;padding:3px 10px;font-family:monospace;font-size:10px;cursor:pointer}
-.out-assign-btns button:hover{border-color:#555;color:var(--text)}
-.out-wide{grid-column:1/-1}
-.out-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end}
-.out-form label{font-size:9px;letter-spacing:1px;color:var(--text3)}
-.out-form select,.out-form input{margin-top:4px}
-.out-plan{background:#080808;border:1px solid var(--border);border-radius:3px;padding:10px;font-size:11px;line-height:1.55;color:var(--text2);min-height:72px;white-space:pre-wrap}
-.out-safe{border-color:#153a15;color:var(--green)}
-.out-danger{border-color:#3a1515;color:var(--red)}
-.out-map-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-.out-map-btn{padding:7px 8px;text-align:left}
-.out-map-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0d1a0d}
+#out-strip{display:flex;align-items:center;gap:10px;padding:7px 14px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;font-size:10px;letter-spacing:1px}
+#out-x-badge{color:#555}
+#out-x-badge.ok{color:var(--accent3)}
+#out-x-badge.warn{color:var(--accent2)}
+#out-strip-status{margin-left:auto;color:#555;font-size:10px}
+#out-main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;max-width:820px}
+#out-assign-area{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.out-role-label{font-size:9px;letter-spacing:2px;color:var(--text4);margin-bottom:8px}
+.out-disp-btns{display:flex;flex-direction:column;gap:5px}
+.out-disp-btn{background:#111;border:1px solid #222;border-radius:3px;padding:9px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s;display:flex;flex-direction:column;gap:2px}
+.out-disp-btn:hover{border-color:#444}
+.out-disp-btn.active{border-color:var(--accent3);background:#0a1a0a}
+.out-disp-btn .dname{font-size:11px;color:var(--text)}
+.out-disp-btn.active .dname{color:var(--accent3)}
+.out-disp-btn .dres{color:#555;font-size:9px}
+#out-map-area{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+#out-map-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.out-map-btn{background:#111;border:1px solid #222;border-radius:3px;padding:8px 12px;cursor:pointer;font-family:monospace;font-size:10px;text-align:left;transition:border-color .1s}
+.out-map-btn:hover{border-color:#444}
+.out-map-btn.active{border-color:var(--accent3);color:var(--accent3);background:#0a1a0a}
+.msurfs{font-size:9px;color:#555;margin-top:2px}
+.out-map-btn.active .msurfs{color:#3a6}
+#out-action-area{display:flex;align-items:center;gap:14px;padding-top:2px}
+#out-apply-btn{padding:11px 28px;font-size:11px;letter-spacing:2px;border:1px solid #153a15;color:var(--green);background:var(--bg1);border-radius:3px;cursor:pointer;font-family:monospace;flex-shrink:0}
+#out-apply-btn:hover{background:#0a1a0a;border-color:#2a5a2a}
+#out-layout-status{font-size:10px;color:#555}
+.out-warn{color:var(--accent2)!important}
 
 /* ── HELP TAB ────────────────────────────────────────────────────────────── */
 #tab-help{flex-direction:column;overflow-y:auto;background:var(--bg);padding:16px}
@@ -1077,57 +1072,30 @@ async function zonesSave(){
      OUTPUTS TAB
      ════════════════════════════════════════ -->
 <div id="tab-outputs">
-  <div id="outputs-body">
-
-    <div class="out-section">
-      <h3>CONNECTED DISPLAYS</h3>
-      <div id="out-displays">—</div>
-    </div>
-
-    <div class="out-section">
-      <h3>STAGE OUTPUT SETUP</h3>
-      <div class="out-form">
-        <label>CONTROLLER SCREEN
-          <select id="out-ctrl-display" onchange="previewOutputPlan()"></select>
-        </label>
-        <label>PROJECTOR SCREEN
-          <select id="out-vis-display" onchange="previewOutputPlan()"></select>
-        </label>
-        <label>MAPPING PRESET
-          <select id="out-map-file" onchange="previewOutputPlan()"></select>
-        </label>
-        <label>BLACKOUT WHILE APPLYING
-          <select id="out-blackout" onchange="previewOutputPlan()">
-            <option value="true">YES</option>
-            <option value="false">NO</option>
-          </select>
-        </label>
+  <div id="out-strip">
+    <span id="out-x-badge">X11 ●</span>
+    <button class="cbtn" onclick="restartXLayout()" style="width:auto;padding:3px 10px;margin-top:0;font-size:9px;letter-spacing:1px">RESTART X</button>
+    <span id="out-strip-status"></span>
+  </div>
+  <div id="out-main">
+    <div id="out-assign-area">
+      <div>
+        <div class="out-role-label">CONTROLLER</div>
+        <div id="out-ctrl-btns" class="out-disp-btns"></div>
       </div>
-      <div class="out-layout-btns" style="margin-top:10px">
-        <button class="out-btn out-safe" onclick="previewOutputPlan()">PREVIEW PLAN</button>
-        <button class="out-btn out-safe" onclick="applyOutputPlan()">APPLY TO STAGE</button>
-        <button class="out-btn" onclick="openSelectedMappingInMapTab()">OPEN MAP EDITOR</button>
-        <button class="out-btn" onclick="restartXLayout()">RESTART X LAYOUT</button>
+      <div>
+        <div class="out-role-label">PROJECTOR</div>
+        <div id="out-vis-btns" class="out-disp-btns"></div>
       </div>
-      <div id="out-layout-status" class="out-status">—</div>
     </div>
-
-    <div class="out-section out-wide">
-      <h3>OUTPUT PLAN</h3>
-      <div id="out-plan" class="out-plan">Open OUTPUTS to inspect displays and build a stage plan.</div>
+    <div id="out-map-area">
+      <div class="out-role-label">MAPPING</div>
+      <div id="out-map-btns"></div>
     </div>
-
-    <div class="out-section out-wide">
-      <h3>MAPPING PRESETS</h3>
-      <div id="out-map-list" class="out-map-list"></div>
-      <div id="out-map-status" class="out-status"></div>
+    <div id="out-action-area">
+      <button id="out-apply-btn" onclick="applyOutputPlan()">APPLY TO STAGE</button>
+      <span id="out-layout-status"></span>
     </div>
-
-    <div class="out-section out-wide">
-      <h3>X11 STATUS</h3>
-      <div id="out-x-status">checking…</div>
-    </div>
-
   </div>
 </div>
 
@@ -1189,13 +1157,13 @@ ii stop</div>
 
 <script>
 let outputsTimer=null;
-let outputState={displays:[], mappings:[], ctrl:{}, assign:{}};
 let outputApplyBusy=false;
+let selCtrl='', selVis='', selMapping=0, _outInited=false;
 
 async function outputsLoad(){
   await refreshOutputs();
   clearInterval(outputsTimer);
-  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},2500);
+  outputsTimer=setInterval(()=>{if(activeTab==='outputs')refreshOutputs()},3000);
 }
 
 async function refreshOutputs(){
@@ -1204,181 +1172,94 @@ async function refreshOutputs(){
     const d=await r.json();
     renderOutputs(d);
   }catch(e){
-    document.getElementById('out-x-status').textContent='display API unavailable';
+    const b=document.getElementById('out-x-badge');
+    if(b){b.textContent='X11 ✕';b.className='warn';}
   }
 }
 
 function renderOutputs(d){
-  outputState=d;
-  document.getElementById('out-layout-status').textContent='layout: '+(d.layout||'unknown');
-  document.getElementById('out-x-status').innerHTML=d.x_running
-    ? '<span class="help-ok">running on DISPLAY '+(d.display||':0')+'</span>'
-    : '<span class="help-warn">not running</span>';
-
-  const list=document.getElementById('out-displays');
-  const displays=d.displays||[];
-  if(!displays.length){
-    list.innerHTML='<div class="out-status">no displays reported by xrandr</div>';
-  }else{
-    list.innerHTML='<div class="out-disp-list">'+displays.map(x=>`
-      <div class="out-disp-row">
-        <span class="out-disp-dot ${x.connected?'on':''}"></span>
-        <span class="out-disp-name">${x.name}</span>
-        <span class="out-disp-res">${x.resolution||'off'}</span>
-        <span class="out-disp-pos">${x.position||''}</span>
-      </div>`).join('')+'</div>';
+  const badge=document.getElementById('out-x-badge');
+  if(badge){badge.textContent=d.x_running?'X11 ●':'X11 ✕';badge.className=d.x_running?'ok':'warn';}
+  const displays=(d.displays||[]).filter(x=>x.connected);
+  if(!_outInited){
+    _outInited=true;
+    selCtrl=d.assign?.ctrl||d.suggested_ctrl||displays[0]?.name||'';
+    selVis=d.assign?.vis||d.suggested_vis||displays[1]?.name||displays[0]?.name||'';
+    selMapping=d.active_mapping??0;
   }
-
-  const assign=d.assign||{};
-  fillDisplaySelect('out-ctrl-display', displays, assign.ctrl||d.suggested_ctrl||'');
-  fillDisplaySelect('out-vis-display', displays, assign.vis||d.suggested_vis||'');
-  fillMapSelect(d.mappings||[], d.active_mapping);
-  renderMapButtons(d.mappings||[], d.active_mapping);
-  previewOutputPlan();
+  buildDispButtons('out-ctrl-btns',displays,selCtrl,n=>{selCtrl=n;checkSameDisp();});
+  buildDispButtons('out-vis-btns',displays,selVis,n=>{selVis=n;checkSameDisp();});
+  buildMapButtons(d.mappings||[],selMapping);
+  checkSameDisp();
 }
 
-function fillDisplaySelect(id,displays,selected){
-  const sel=document.getElementById(id);
-  const old=sel.value||selected;
-  sel.innerHTML='';
-  (displays||[]).filter(d=>d.connected).forEach(d=>{
-    const o=document.createElement('option');
-    o.value=d.name;
-    o.textContent=`${d.name} ${d.resolution||'off'}`;
-    if(d.name===old)o.selected=true;
-    sel.appendChild(o);
-  });
+function checkSameDisp(){
+  const s=document.getElementById('out-layout-status');
+  if(!s)return;
+  if(selCtrl&&selCtrl===selVis){s.textContent='⚠ same display for both';s.className='out-warn';}
+  else if(s.className==='out-warn'){s.textContent='';s.className='';}
 }
 
-function fillMapSelect(mappings,active){
-  const sel=document.getElementById('out-map-file');
-  const old=sel.value;
-  sel.innerHTML='';
-  if(!mappings.length){
-    const o=document.createElement('option');
-    o.value='';
-    o.textContent='no mapping files';
-    o.selected=true;
-    sel.appendChild(o);
-    return;
-  }
-  mappings.forEach((m,i)=>{
-    const o=document.createElement('option');
-    o.value=m.file;
-    const surf=(m.surfaces||0);
-    o.textContent=`${i} ${m.name||m.file} (${surf} surfaces)`;
-    if((old&&m.file===old)||(!old&&i===active))o.selected=true;
-    sel.appendChild(o);
-  });
-}
-
-function renderMapButtons(mappings,active){
-  const box=document.getElementById('out-map-list');
+function buildDispButtons(id,displays,selected,onSelect){
+  const box=document.getElementById(id);
+  if(!box)return;
   box.innerHTML='';
-  mappings.forEach((m,i)=>{
-    const b=document.createElement('button');
-    b.className='out-btn out-map-btn'+(i===active?' active':'');
-    b.textContent=`${i}  ${m.name||m.file}`;
-    b.onclick=()=>setActiveMapping(i);
-    box.appendChild(b);
+  if(!displays.length){box.innerHTML='<div style="color:#555;font-size:10px;padding:6px">no displays detected</div>';return;}
+  displays.forEach(d=>{
+    const btn=document.createElement('button');
+    btn.className='out-disp-btn'+(d.name===selected?' active':'');
+    btn.innerHTML=`<span class="dname">${d.name}</span><span class="dres">${d.resolution||'—'}</span>`;
+    btn.onclick=()=>{onSelect(d.name);box.querySelectorAll('.out-disp-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');};
+    box.appendChild(btn);
   });
 }
 
-function selectedOutputPlan(){
-  const ctrl=document.getElementById('out-ctrl-display').value;
-  const vis=document.getElementById('out-vis-display').value;
-  const mapFile=document.getElementById('out-map-file').value;
-  const map=(outputState.mappings||[]).find(m=>m.file===mapFile);
-  const mapIdx=(outputState.mappings||[]).findIndex(m=>m.file===mapFile);
-  return {
-    ctrl,
-    vis,
-    mapping:Math.max(0,mapIdx),
-    mapping_file:mapFile,
-    mapping_name:map? (map.name||map.file):'',
-    mapping_surfaces:map? (map.surfaces||0):0,
-    blackout:document.getElementById('out-blackout').value==='true',
-  };
-}
-
-function previewOutputPlan(){
-  const p=selectedOutputPlan();
-  const displays=outputState.displays||[];
-  const cd=displays.find(d=>d.name===p.ctrl);
-  const vd=displays.find(d=>d.name===p.vis);
-  const same=p.ctrl&&p.ctrl===p.vis;
-  const lines=[
-    `controller  -> ${p.ctrl||'choose display'} ${cd&&cd.resolution?'('+cd.resolution+')':''}`,
-    `visuals     -> ${p.vis||'choose display'} ${vd&&vd.resolution?'('+vd.resolution+')':''}`,
-    `mapping     -> ${p.mapping} ${p.mapping_name||p.mapping_file||'none'} (${p.mapping_surfaces||0} surfaces)`,
-    `layout      -> extended desktop, projector right of controller`,
-    `blackout    -> ${p.blackout?'yes, during apply':'no'}`,
-  ];
-  if(same)lines.push('warning     -> controller and visuals are assigned to the same display');
-  document.getElementById('out-plan').textContent=lines.join('\n');
+function buildMapButtons(mappings,activeIdx){
+  const box=document.getElementById('out-map-btns');
+  if(!box)return;
+  box.innerHTML='';
+  if(!mappings.length){box.innerHTML='<div style="color:#555;font-size:10px;padding:6px">no mapping files</div>';return;}
+  mappings.forEach((m,i)=>{
+    const btn=document.createElement('button');
+    btn.className='out-map-btn'+(i===activeIdx?' active':'');
+    const n=m.surfaces||0;
+    btn.innerHTML=`${m.name||m.file}<div class="msurfs">${n} surface${n!==1?'s':''}</div>`;
+    btn.onclick=()=>{
+      selMapping=i;
+      box.querySelectorAll('.out-map-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:i})}).catch(()=>{});
+    };
+    box.appendChild(btn);
+  });
 }
 
 async function applyOutputPlan(){
   if(outputApplyBusy)return;
-  const p=selectedOutputPlan();
-  if(!p.ctrl||!p.vis){
-    document.getElementById('out-layout-status').textContent='choose controller and projector displays first';
-    return;
-  }
-  if(!p.mapping_file){
-    document.getElementById('out-layout-status').textContent='choose or create a mapping preset first';
-    return;
-  }
-  if(p.ctrl===p.vis&&!confirm('Controller and visuals are on the same display. Apply anyway?'))return;
+  const st=document.getElementById('out-layout-status');
+  if(!selCtrl||!selVis){if(st){st.textContent='select controller and projector first';st.className='';}return;}
+  if(selCtrl===selVis&&!confirm('Controller and projector are the same display. Apply anyway?'))return;
   outputApplyBusy=true;
-  document.getElementById('out-layout-status').textContent='applying safe stage layout...';
+  if(st){st.textContent='applying…';st.className='';}
   try{
-    const r=await fetch('/api/output-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const r=await fetch('/api/output-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ctrl:selCtrl,vis:selVis,mapping:selMapping,blackout:true})});
     const d=await r.json();
-    document.getElementById('out-layout-status').textContent=(d&&d.msg)||'applied';
+    if(st)st.textContent=d.msg||'applied ✓';
   }catch(e){
-    document.getElementById('out-layout-status').textContent='error: '+e;
-  }finally{
-    outputApplyBusy=false;
-  }
-  setTimeout(refreshOutputs,700);
-}
-
-function openSelectedMappingInMapTab(){
-  const mapFile=document.getElementById('out-map-file').value;
-  if(!mapFile){
-    document.getElementById('out-map-status').textContent='no mapping preset selected';
-    return;
-  }
-  const fileSel=document.getElementById('fileSel');
-  if(fileSel){
-    fileSel.value=mapFile;
-    switchFile(mapFile);
-  }
-  switchTab('map');
-  st('opened mapping: '+mapFile);
-}
-
-async function setActiveMapping(idx){
-  try{
-    await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapping:idx})});
-    document.getElementById('out-map-status').textContent='mapping '+idx+' active';
-  }catch(e){
-    document.getElementById('out-map-status').textContent='error: '+e;
-  }
-  setTimeout(refreshOutputs,400);
+    if(st)st.textContent='error: '+e;
+  }finally{outputApplyBusy=false;}
+  setTimeout(refreshOutputs,800);
 }
 
 async function restartXLayout(){
-  if(!confirm('Restart the X show layout? The display may blink for a few seconds.'))return;
-  document.getElementById('out-layout-status').textContent='restart requested...';
+  if(!confirm('Restart the X show layout? The display may blink.'))return;
+  const st=document.getElementById('out-strip-status');
+  if(st)st.textContent='restarting X…';
   try{
     const r=await fetch('/api/display-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:'restart-x'})});
     const d=await r.json();
-    document.getElementById('out-layout-status').textContent=d.msg||'restart requested';
-  }catch(e){
-    document.getElementById('out-layout-status').textContent='error: '+e;
-  }
+    if(st){st.textContent=d.msg||'restart requested';setTimeout(()=>{st.textContent='';},4000);}
+  }catch(e){if(st)st.textContent='error: '+e;}
 }
 
 async function helpLoad(){
