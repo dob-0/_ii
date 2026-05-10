@@ -1068,6 +1068,7 @@ async function zonesSave(){
       <div class="out-layout-btns" style="margin-top:10px">
         <button class="out-btn out-safe" onclick="previewOutputPlan()">PREVIEW PLAN</button>
         <button class="out-btn out-safe" onclick="applyOutputPlan()">APPLY TO STAGE</button>
+        <button class="out-btn" onclick="openSelectedMappingInMapTab()">OPEN MAP EDITOR</button>
         <button class="out-btn" onclick="restartXLayout()">RESTART X LAYOUT</button>
       </div>
       <div id="out-layout-status" class="out-status">—</div>
@@ -1151,6 +1152,7 @@ ii stop</div>
 <script>
 let outputsTimer=null;
 let outputState={displays:[], mappings:[], ctrl:{}, assign:{}};
+let outputApplyBusy=false;
 
 async function outputsLoad(){
   await refreshOutputs();
@@ -1214,10 +1216,19 @@ function fillMapSelect(mappings,active){
   const sel=document.getElementById('out-map-file');
   const old=sel.value;
   sel.innerHTML='';
+  if(!mappings.length){
+    const o=document.createElement('option');
+    o.value='';
+    o.textContent='no mapping files';
+    o.selected=true;
+    sel.appendChild(o);
+    return;
+  }
   mappings.forEach((m,i)=>{
     const o=document.createElement('option');
     o.value=m.file;
-    o.textContent=`${i} ${m.name||m.file}`;
+    const surf=(m.surfaces||0);
+    o.textContent=`${i} ${m.name||m.file} (${surf} surfaces)`;
     if((old&&m.file===old)||(!old&&i===active))o.selected=true;
     sel.appendChild(o);
   });
@@ -1239,12 +1250,15 @@ function selectedOutputPlan(){
   const ctrl=document.getElementById('out-ctrl-display').value;
   const vis=document.getElementById('out-vis-display').value;
   const mapFile=document.getElementById('out-map-file').value;
+  const map=(outputState.mappings||[]).find(m=>m.file===mapFile);
   const mapIdx=(outputState.mappings||[]).findIndex(m=>m.file===mapFile);
   return {
     ctrl,
     vis,
     mapping:Math.max(0,mapIdx),
     mapping_file:mapFile,
+    mapping_name:map? (map.name||map.file):'',
+    mapping_surfaces:map? (map.surfaces||0):0,
     blackout:document.getElementById('out-blackout').value==='true',
   };
 }
@@ -1258,7 +1272,7 @@ function previewOutputPlan(){
   const lines=[
     `controller  -> ${p.ctrl||'choose display'} ${cd&&cd.resolution?'('+cd.resolution+')':''}`,
     `visuals     -> ${p.vis||'choose display'} ${vd&&vd.resolution?'('+vd.resolution+')':''}`,
-    `mapping     -> ${p.mapping} ${p.mapping_file||''}`,
+    `mapping     -> ${p.mapping} ${p.mapping_name||p.mapping_file||'none'} (${p.mapping_surfaces||0} surfaces)`,
     `layout      -> extended desktop, projector right of controller`,
     `blackout    -> ${p.blackout?'yes, during apply':'no'}`,
   ];
@@ -1267,21 +1281,44 @@ function previewOutputPlan(){
 }
 
 async function applyOutputPlan(){
+  if(outputApplyBusy)return;
   const p=selectedOutputPlan();
   if(!p.ctrl||!p.vis){
     document.getElementById('out-layout-status').textContent='choose controller and projector displays first';
     return;
   }
+  if(!p.mapping_file){
+    document.getElementById('out-layout-status').textContent='choose or create a mapping preset first';
+    return;
+  }
   if(p.ctrl===p.vis&&!confirm('Controller and visuals are on the same display. Apply anyway?'))return;
+  outputApplyBusy=true;
   document.getElementById('out-layout-status').textContent='applying safe stage layout...';
   try{
     const r=await fetch('/api/output-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
     const d=await r.json();
-    document.getElementById('out-layout-status').textContent=d.msg||'applied';
+    document.getElementById('out-layout-status').textContent=(d&&d.msg)||'applied';
   }catch(e){
     document.getElementById('out-layout-status').textContent='error: '+e;
+  }finally{
+    outputApplyBusy=false;
   }
   setTimeout(refreshOutputs,700);
+}
+
+function openSelectedMappingInMapTab(){
+  const mapFile=document.getElementById('out-map-file').value;
+  if(!mapFile){
+    document.getElementById('out-map-status').textContent='no mapping preset selected';
+    return;
+  }
+  const fileSel=document.getElementById('fileSel');
+  if(fileSel){
+    fileSel.value=mapFile;
+    switchFile(mapFile);
+  }
+  switchTab('map');
+  st('opened mapping: '+mapFile);
 }
 
 async function setActiveMapping(idx){
@@ -1531,14 +1568,24 @@ def _output_setup_state():
     assign = _load_assign()
     suggested_ctrl, suggested_vis = _suggest_assignments(displays)
     ctrl = load_json(CTRL_PATH, {})
+    mappings = _mapping_files()
+    active_mapping = int(ctrl.get('mapping', 0) or 0)
+    if active_mapping < 0:
+      active_mapping = 0
+    if mappings:
+      active_mapping = min(active_mapping, len(mappings) - 1)
+      active_mapping_file = mappings[active_mapping]['file']
+    else:
+      active_mapping_file = ''
     return {
         'displays': displays,
         'layout': _detect_layout(displays),
         'assign': assign,
         'suggested_ctrl': suggested_ctrl,
         'suggested_vis': suggested_vis,
-        'mappings': _mapping_files(),
-        'active_mapping': int(ctrl.get('mapping', 0) or 0),
+      'mappings': mappings,
+      'active_mapping': active_mapping,
+      'active_mapping_file': active_mapping_file,
         'ctrl': ctrl,
         'x_running': _x_running(),
         'display': ':0',
@@ -1554,20 +1601,42 @@ def _apply_output_setup(body):
     vis_display = next((d for d in displays if d['name'] == vis_name and d.get('connected')), None)
     if not ctrl_display or not vis_display:
         return 'choose connected controller and projector displays'
+    if ctrl_name == vis_name:
+      return 'controller and visuals cannot be assigned to the same display'
 
     env = {**os.environ, 'DISPLAY': ':0', 'XAUTHORITY': '/home/dob/.Xauthority'}
     previous_ctrl = load_json(CTRL_PATH, {})
+    previous_blackout = bool(previous_ctrl.get('blackout', False))
+    mappings = _mapping_files()
+    if mappings:
+        mapping = max(0, min(mapping, len(mappings) - 1))
+    else:
+        mapping = 0
+
+    if not _x_running():
+        return 'X is not running; start or restart X first'
+
     if blackout:
         state = dict(previous_ctrl)
         state['blackout'] = True
         save_json_atomic(CTRL_PATH, state)
 
     try:
-        cmd = ['xrandr', '--output', ctrl_name, '--auto', '--primary',
-               '--output', vis_name, '--auto', '--right-of', ctrl_name]
-        subprocess.run(cmd, env=env, timeout=5)
+      cmd = ['xrandr', '--output', ctrl_name, '--auto', '--primary',
+           '--output', vis_name, '--auto', '--right-of', ctrl_name]
+      proc = subprocess.run(cmd, env=env, timeout=5,
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.PIPE, text=True)
+      if proc.returncode != 0:
+        err = (proc.stderr or 'xrandr failed').strip()
+        return f'xrandr failed: {err}'
     except Exception as exc:
-        return f'xrandr error: {exc}'
+      return f'xrandr error: {exc}'
+    finally:
+      if blackout:
+        restore = dict(load_json(CTRL_PATH, {}))
+        restore['blackout'] = previous_blackout
+        save_json_atomic(CTRL_PATH, restore)
 
     time_sleep = 0.4
     try:
@@ -1589,7 +1658,7 @@ def _apply_output_setup(body):
     state = dict(load_json(CTRL_PATH, {}))
     state['mapping'] = mapping
     if blackout:
-        state['blackout'] = bool(previous_ctrl.get('blackout', False))
+      state['blackout'] = previous_blackout
     save_json_atomic(CTRL_PATH, state)
     return f'stage output applied: controller={ctrl_name}, visuals={vis_name}, mapping={mapping}'
 

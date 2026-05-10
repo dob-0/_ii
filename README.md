@@ -80,7 +80,7 @@ Portal tabs:
 | `CTRL` | Live VJ controls: mode, palette, BPM, layer B, flash, blackout. |
 | `MEDIA` | Upload video/image files and play video through the output stack. |
 | `OUTPUTS` | Build and apply the stage output plan: controller screen, projector screen, mapping preset. |
-| `HELP` | Shows portal URL, SSH command, IP addresses, display state, and rescue commands. |
+| `HELP` | Shows portal URL, SSH command, IP addresses, display state, rescue commands, and one-click restart buttons (`VIS`, `CTRL`, `WEB`, `X`, `ALL`). |
 
 The portal writes to `control.json`, mapping files in `mappings/`, and runtime
 state files. These runtime files are intentionally ignored by git.
@@ -111,6 +111,16 @@ choose a screen, choose which content goes to it, choose a mapping preset, then
 apply deliberately. It avoids one-click mirror/projector-only changes during a
 show because those can hide the controller or strand the visuals on the wrong
 display.
+
+Projection mapping workflow (recommended):
+
+1. Open `OUTPUTS`.
+2. Pick controller screen, projector screen, and mapping preset.
+3. Click `PREVIEW PLAN`.
+4. Click `OPEN MAP EDITOR` to inspect or edit the selected mapping geometry.
+5. In `MAP`, drag corners for each surface and save.
+6. In `ZONES`, set mode per surface if needed.
+7. Return to `OUTPUTS` and click `APPLY TO STAGE`.
 
 If the projector is connected but black:
 
@@ -171,7 +181,7 @@ During the show:
 - Use `CTRL` for mode, palette, BPM, layer, flash, and blackout.
 - Use `ZONES` if each mapped surface should show a different mode.
 - Use `MEDIA` only when you intentionally want video playback.
-- Use SSH only for maintenance commands such as `ii status` or `ii restart x`.
+- Use `HELP` restart buttons first (`VIS`, `CTRL`, `WEB`, `X`) before considering a full machine reboot.
 
 After the show:
 
