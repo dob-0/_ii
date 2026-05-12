@@ -51,6 +51,49 @@ Use this when the machine is already installed and you just need to run a show.
    ii restart x
    ```
 
+## Mapping-First Startup (Recommended)
+
+Use this exact order on show day. It keeps routing predictable and avoids
+starting performance controls before outputs are assigned.
+
+1. Run `ii xstart`.
+2. Open portal `OUTPUTS` first (before `CTRL`).
+3. Set `CONTROLLER SCREEN` to laptop panel (`eDP-1`/`LVDS-1`).
+4. Set `PROJECTOR SCREEN` to HDMI output.
+5. Choose mapping preset.
+6. Click `PREVIEW PLAN` and verify controller/projector targets.
+7. Click `APPLY TO STAGE`.
+8. Open `MAP` and confirm geometry.
+9. Open `ZONES` and confirm each surface mode assignment.
+10. Only then open `CTRL` and start the performance.
+
+## Laptop Screen Black, HDMI Shows Visuals (Recovery)
+
+If Debian starts and HDMI has visuals but the laptop panel is black, do this:
+
+1. From another device, open the portal at `http://<ii-ip>:7777`.
+2. Go to `OUTPUTS`.
+3. Re-select laptop panel as `CONTROLLER SCREEN`.
+4. Re-select HDMI as `PROJECTOR SCREEN`.
+5. Select the intended mapping preset.
+6. Click `PREVIEW PLAN`.
+7. Click `APPLY TO STAGE`.
+8. Wait a few seconds. If still black, run:
+
+   ```bash
+   ii restart x
+   ```
+
+9. Re-apply the same `OUTPUTS` plan once X relaunches.
+
+Fast diagnostics when needed:
+
+```bash
+DISPLAY=:0 xrandr --query
+DISPLAY=:0 wmctrl -lG
+ii status
+```
+
 ## Web Portal
 
 Run the portal on the `_ii` machine:
