@@ -10,7 +10,8 @@ class Plasma(Mode):
     def render(self, buf, w, h, t, frame, cfg, pal, syms):
         p = pal
         tf = frame * 0.06
-        n = len(syms) - 1
+        syms_safe = syms or ['#']
+        n = len(syms_safe) - 1
 
         for y in range(h):
             ny = y / h * 10
@@ -23,7 +24,7 @@ class Plasma(Mode):
                     math.sin(math.sqrt(nx * nx + ny * ny) * 0.6 + tf * 1.1)
                 )
                 v = (v + 4) / 8
-                ch = syms[int(v * n)]
+                ch = syms_safe[int(v * n)]
                 col = (
                     C[p['a']] if v > 0.72 else
                     C[p['p']] if v > 0.45 else

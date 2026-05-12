@@ -365,6 +365,12 @@ class Engine:
                     syms = symbol_sets[sym_set]
                 else:
                     syms = self.cfg.get('symbols', ['#'])
+                try:
+                    syms = list(syms)
+                except Exception:
+                    syms = ['#']
+                if not syms:
+                    syms = ['#']
                 self._master_dim = float(merged.get('master_dim', 1.0))
 
                 if self.frame % 10 == 0:

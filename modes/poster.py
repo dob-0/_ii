@@ -1,7 +1,7 @@
 import math
 import random
 
-from modes.base import C, Mode
+from modes.base import C, Mode, PALETTES
 
 BLOCK5 = {
     'M': ['█   █', '██ ██', '█ █ █', '█   █', '█   █'],
@@ -76,7 +76,7 @@ class Poster(Mode):
         energy = max(0.0, min(1.0, audio * 0.8 + peak * 0.45 + cam * 0.9))
         tf = frame * (0.025 + energy * 0.06)
 
-        palette = int(cfg.get('palette', 0) or 0) % 6
+        palette = int(cfg.get('palette', 0) or 0) % len(PALETTES)
         if palette == 1:
             bg, fg, hot, dark = C['dim'],     C['white'],   C['yellow'],  C['dim']
         elif palette == 2:

@@ -34,7 +34,8 @@ class Tunnel(Mode):
     def render(self, buf, w, h, t, frame, cfg, pal, syms):
         self._precompute(w, h)
         p = pal
-        syms_n = len(syms)
+        syms_safe = syms or ['#']
+        syms_n = len(syms_safe)
 
         for y in range(h):
             row_r, row_a = self.cache[y]
@@ -43,7 +44,7 @@ class Tunnel(Mode):
                 angle = row_a[x]
                 u = int(angle / TAU * 6 + frame * 0.15) % 6
                 v = int(28 / r + frame * 0.9) % syms_n
-                ch = syms[v]
+                ch = syms_safe[v]
                 zone = r / (max(w, h) * 0.6)
                 col = (
                     C[p['a']] if zone < 0.18 else
@@ -51,4 +52,4 @@ class Tunnel(Mode):
                     C[p['s']] if zone < 0.75 else
                     C['dim']
                 )
-                buf[y][x] = ((ch if u % 2 == 0 else random.choice(syms)), col)
+                buf[y][x] = ((ch if u % 2 == 0 else random.choice(syms_safe)), col)
