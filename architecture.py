@@ -53,6 +53,10 @@ DEFAULTS = {
     'layer_b_alpha': 1.0,
     'master_dim': 1.0,
     'mapping': 0,
+    'map_mode': False,
+    'map_selected': -1,
+    'map_cursor_x': None,
+    'map_cursor_y': None,
 }
 
 

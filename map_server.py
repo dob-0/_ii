@@ -49,7 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .tab-btn.active{color:var(--tab-active);border-color:var(--border3)}
 
 /* ── tab panes ── */
-#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-outputs,#tab-help,#tab-term{flex:1;display:none;overflow:hidden}
+#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-camera,#tab-outputs,#tab-help,#tab-term{flex:1;display:none;overflow:hidden}
 #tab-map.active{display:flex}
 #tab-ctrl.active{display:flex;overflow-y:auto}
 #tab-zones.active{display:flex;flex-direction:column;overflow:hidden}
@@ -89,6 +89,25 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 #media-player-bar{background:#0a0a0a;border-top:1px solid var(--border);padding:6px 12px;font-size:10px;color:#555;display:flex;align-items:center;gap:12px;flex-shrink:0}
 #now-playing{flex:1;color:var(--text3)}
 .media-empty{color:var(--text4);font-size:11px;padding:20px}
+
+/* ════════════════════════════════════════
+   CAMERA TAB
+   ════════════════════════════════════════ */
+#tab-camera.active{display:flex;flex-direction:column;background:#030303}
+#camera-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+#camera-toolbar label{font-size:9px;letter-spacing:2px;color:var(--text4);margin-top:0}
+#camera-url{width:min(520px,60vw);margin-top:0}
+#camera-status{margin-left:auto;font-size:10px;color:var(--text4);letter-spacing:1px}
+#camera-status.ok{color:var(--accent3)}
+#camera-status.warn{color:var(--accent2)}
+#camera-body{flex:1;display:flex;min-height:0}
+#camera-view{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;overflow:hidden}
+#camera-stream{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;image-rendering:auto;display:none}
+#camera-empty{color:#222;font-size:12px;letter-spacing:2px}
+#camera-side{width:240px;flex-shrink:0;border-left:1px solid var(--border);background:#070707;padding:12px;overflow-y:auto}
+.camera-side-label{font-size:9px;letter-spacing:2px;color:#333;margin:2px 0 8px}
+.camera-preset{width:100%;text-align:left;font-size:10px;padding:6px 8px;margin:0 0 5px;background:#0a0a0a;border:1px solid #1a1a1a;color:#777}
+.camera-preset:hover{color:var(--text2);border-color:#333}
 
 /* ════════════════════════════════════════
    MAP TAB — original layout preserved
@@ -296,6 +315,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
   <button class="tab-btn active" id="btn-map"   onclick="switchTab('map')">[ MAP ]</button>
   <button class="tab-btn"        id="btn-zones" onclick="switchTab('zones')">[ ZONES ]</button>
   <button class="tab-btn"        id="btn-ctrl"  onclick="switchTab('ctrl')">[ CTRL ]</button>
+  <button class="tab-btn"        id="btn-camera" onclick="switchTab('camera')">[ CAMERA ]</button>
   <button class="tab-btn"        id="btn-media" onclick="switchTab('media')">[ MEDIA ]</button>
   <button class="tab-btn"        id="btn-outputs" onclick="switchTab('outputs')">[ OUTPUTS ]</button>
   <button class="tab-btn"        id="btn-help" onclick="switchTab('help')">[ HELP ]</button>
@@ -328,6 +348,11 @@ canvas{cursor:crosshair;image-rendering:pixelated}
       <select id="p-en" onchange="uprop('enabled',this.value==='true')">
         <option value="true">ON</option><option value="false">OFF</option>
       </select>
+      <label>AREA ZOOM</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <button onclick="scaleSurf(0.96)">- ZOOM OUT</button>
+        <button onclick="scaleSurf(1.04)">+ ZOOM IN</button>
+      </div>
       <button onclick="resetCorn()">RESET CORNERS</button>
       <button class="btn-del" onclick="delSurf()">DELETE SURFACE</button>
     </div>
@@ -343,6 +368,38 @@ canvas{cursor:crosshair;image-rendering:pixelated}
     <span id="st">ready</span>
     <span>drag corners to warp · click surface to select · N new · Del delete</span>
     <span id="coords"></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     CAMERA TAB
+     ════════════════════════════════════════ -->
+<div id="tab-camera">
+  <div id="camera-toolbar">
+    <label>ESP CAM</label>
+    <input id="camera-url" type="text" spellcheck="false" autocomplete="off"
+           placeholder="http://192.168.88.x:81/stream" onkeydown="cameraKey(event)">
+    <button class="cbtn" onclick="cameraConnect()" style="width:auto;padding:3px 12px;margin-top:0">CONNECT</button>
+    <button class="cbtn" onclick="cameraStop()" style="width:auto;padding:3px 12px;margin-top:0">STOP</button>
+    <span id="camera-status">idle</span>
+  </div>
+  <div id="camera-body">
+    <div id="camera-view">
+      <img id="camera-stream" alt="ESP camera stream" onload="cameraLoaded()" onerror="cameraError()">
+      <div id="camera-empty">NO CAMERA STREAM</div>
+    </div>
+    <div id="camera-side">
+      <div class="camera-side-label">STREAM PATHS</div>
+      <button class="camera-preset" onclick="cameraUsePath(':81/stream')">:81/stream</button>
+      <button class="camera-preset" onclick="cameraUsePath('/stream')">/stream</button>
+      <button class="camera-preset" onclick="cameraUsePath('/video')">/video</button>
+      <button class="camera-preset" onclick="cameraUsePath('/mjpeg/1')">/mjpeg/1</button>
+      <button class="camera-preset" onclick="cameraUsePath('/capture')">/capture</button>
+      <div class="camera-side-label" style="margin-top:14px">COMMON LOCAL URLS</div>
+      <button class="camera-preset" onclick="cameraSetUrl('http://192.168.4.1:81/stream')">192.168.4.1:81/stream</button>
+      <button class="camera-preset" onclick="cameraSetUrl('http://192.168.88.1:81/stream')">192.168.88.1:81/stream</button>
+      <button class="camera-preset" onclick="cameraSetUrl('http://esp32cam.local:81/stream')">esp32cam.local:81/stream</button>
+    </div>
   </div>
 </div>
 
@@ -501,7 +558,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 // ══════════════════════════════════════════════════════════════
 //  SHARED STATE
 // ══════════════════════════════════════════════════════════════
-const OW=1366,OH=768;
+const OW=1366,OH=768,MAP_OVERSCAN=0.25,MAP_MIN=-0.25,MAP_MAX=1.25;
 let SCALE=1,surfaces=[],sel=-1,drag=null,MODES=[],curFile='fb_map.json';
 const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
 const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22','#ff6644'];
@@ -520,23 +577,24 @@ function switchTab(t){
     _updateMapBtn();
   }
   activeTab=t;
-  ['map','zones','ctrl','media','outputs','help','term'].forEach(n=>{
+  ['map','zones','ctrl','camera','media','outputs','help','term'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('btn-'+n).classList.toggle('active',t===n);
   });
   if(t==='map'){resize();_enterMapTab();}
   if(t==='ctrl'){startCtrlPoll();}
   if(t==='zones'){fetchMedia().then(()=>zonesInit());}
+  if(t==='camera'){cameraInit();}
   if(t==='media'){mediaLoad();mediaStatusPoll();}
   if(t==='outputs'){outputsLoad();}
   if(t==='help'){helpLoad();}
   if(t==='term'){setTimeout(()=>document.getElementById('term-input').focus(),50);}
 }
 function _enterMapTab(){
-  mapModeActive=true;
+  mapModeActive=false;
   _updateMapBtn();
   fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({map_mode:true,map_selected:sel})}).catch(()=>{});
+    body:JSON.stringify({map_mode:false,map_cursor_x:null,map_cursor_y:null})}).catch(()=>{});
 }
 function _updateMapBtn(){
   const btn=document.getElementById('mapmode-btn');
@@ -576,6 +634,8 @@ document.addEventListener('keydown',e=>{
   if(activeTab!=='map')return;
   if(e.key==='n'||e.key==='N'){addSurf();return}
   if((e.key==='Delete'||e.key==='Backspace')&&sel>=0&&document.activeElement===document.body){delSurf();return}
+  if((e.key==='+'||e.key==='=')&&sel>=0&&document.activeElement===document.body){e.preventDefault();scaleSurf(1.02);return}
+  if((e.key==='-'||e.key==='_')&&sel>=0&&document.activeElement===document.body){e.preventDefault();scaleSurf(0.98);return}
   if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();save()}
 });
 
@@ -635,6 +695,19 @@ function resetCorn(){
   const cx=0.1,cy=0.2,w=0.2,h=0.4;
   surfaces[sel].corners=[[cx,cy],[cx+w,cy],[cx+w,cy+h],[cx,cy+h]];draw();
 }
+function scaleSurf(factor){
+  if(sel<0)return;
+  const s=surfaces[sel];
+  if(!s.corners||s.corners.length<4)return;
+  const cx=s.corners.reduce((a,p)=>a+p[0],0)/s.corners.length;
+  const cy=s.corners.reduce((a,p)=>a+p[1],0)/s.corners.length;
+  s.corners=s.corners.map(([x,y])=>[
+    clampMap(cx+(x-cx)*factor),
+    clampMap(cy+(y-cy)*factor)
+  ]);
+  draw();
+  save();
+}
 let mapModeActive=false;
 function toggleMapMode(){
   mapModeActive=!mapModeActive;
@@ -671,21 +744,49 @@ function renderSide(){
 }
 
 // ── canvas ────────────────────────────────────────────────────────────────────
-const s2c=([nx,ny])=>[nx*canvas.width,ny*canvas.height];
-const c2s=(cx,cy)=>[cx/canvas.width,cy/canvas.height];
+const s2c=([nx,ny])=>[
+  ((nx+MAP_OVERSCAN)/(1+MAP_OVERSCAN*2))*canvas.width,
+  ((ny+MAP_OVERSCAN)/(1+MAP_OVERSCAN*2))*canvas.height
+];
+const c2s=(cx,cy)=>[
+  (cx/canvas.width)*(1+MAP_OVERSCAN*2)-MAP_OVERSCAN,
+  (cy/canvas.height)*(1+MAP_OVERSCAN*2)-MAP_OVERSCAN
+];
+const clampMap=v=>Math.max(MAP_MIN,Math.min(MAP_MAX,v));
+function rgba(hex,a){
+  const h=hex.replace('#','');
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function fillQuad(pts,color){
+  ctx.fillStyle=color;
+  [[0,1,2],[0,2,3]].forEach(([a,b,c])=>{
+    ctx.beginPath();
+    ctx.moveTo(...pts[a]);
+    ctx.lineTo(...pts[b]);
+    ctx.lineTo(...pts[c]);
+    ctx.closePath();
+    ctx.fill();
+  });
+}
 
 function draw(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle='#0c0c0c';ctx.lineWidth=0.5;
   [.1,.2,.3,.4,.5,.6,.7,.8,.9].forEach(t=>{
-    ctx.beginPath();ctx.moveTo(t*canvas.width,0);ctx.lineTo(t*canvas.width,canvas.height);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,t*canvas.height);ctx.lineTo(canvas.width,t*canvas.height);ctx.stroke();
+    const [gx0,gy0]=s2c([t,0]),[gx1,gy1]=s2c([t,1]),[hx0,hy0]=s2c([0,t]),[hx1,hy1]=s2c([1,t]);
+    ctx.beginPath();ctx.moveTo(gx0,gy0);ctx.lineTo(gx1,gy1);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(hx0,hy0);ctx.lineTo(hx1,hy1);ctx.stroke();
   });
   ctx.strokeStyle='#181818';ctx.lineWidth=1;
   [1/3,2/3].forEach(t=>{
-    ctx.beginPath();ctx.moveTo(t*canvas.width,0);ctx.lineTo(t*canvas.width,canvas.height);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,t*canvas.height);ctx.lineTo(canvas.width,t*canvas.height);ctx.stroke();
+    const [gx0,gy0]=s2c([t,0]),[gx1,gy1]=s2c([t,1]),[hx0,hy0]=s2c([0,t]),[hx1,hy1]=s2c([1,t]);
+    ctx.beginPath();ctx.moveTo(gx0,gy0);ctx.lineTo(gx1,gy1);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(hx0,hy0);ctx.lineTo(hx1,hy1);ctx.stroke();
   });
+  const [bx0,by0]=s2c([0,0]),[bx1,by1]=s2c([1,1]);
+  ctx.strokeStyle='#333';ctx.lineWidth=1;
+  ctx.strokeRect(bx0,by0,bx1-bx0,by1-by0);
 
   surfaces.forEach((s,i)=>{
     if(!s.corners||s.corners.length<4)return;
@@ -693,24 +794,25 @@ function draw(){
     const col=COLS[i%COLS.length];
     const isSel=i===sel;
     const off=s.enabled===false;
+    fillQuad(pts,rgba(col,off?0.55:1));
     ctx.beginPath();ctx.moveTo(...pts[0]);pts.slice(1).forEach(p=>ctx.lineTo(...p));ctx.closePath();
-    ctx.fillStyle=col+(isSel?'18':'0c');ctx.fill();
-    ctx.strokeStyle=col+(off?'33':isSel?'dd':'66');ctx.lineWidth=isSel?1.5:1;ctx.stroke();
+    ctx.strokeStyle=rgba(col,off?0.35:isSel?1:0.85);ctx.lineWidth=isSel?1.5:1;ctx.stroke();
     const cx=pts.reduce((a,p)=>a+p[0],0)/4,cy=pts.reduce((a,p)=>a+p[1],0)/4;
-    ctx.fillStyle=col+(off?'44':isSel?'ff':'99');ctx.font=`${isSel?12:10}px monospace`;ctx.textAlign='center';
+    ctx.fillStyle=rgba(col,off?0.45:1);ctx.font=`${isSel?12:10}px monospace`;ctx.textAlign='center';
     ctx.fillText(s.id||`S${i+1}`,cx,cy);
     const ml=s.mode===null?'∅':(MODES[s.mode]||`${s.mode}`);
     ctx.font='8px monospace';ctx.fillStyle='#33333399';ctx.fillText(ml,cx,cy+12);
     pts.forEach(([px,py],ci)=>{
       ctx.beginPath();ctx.arc(px,py,isSel?7:4,0,Math.PI*2);
-      ctx.fillStyle=isSel?col:col+'77';ctx.fill();
+      ctx.fillStyle=isSel?col:rgba(col,0.75);ctx.fill();
       if(isSel){ctx.strokeStyle='#ffffff33';ctx.lineWidth=1;ctx.stroke();
         ctx.fillStyle='#fff';ctx.font='7px monospace';ctx.textAlign='center';ctx.fillText(ci+1,px,py+2.5)}
     });
   });
   ctx.strokeStyle='#ffffff06';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(canvas.width/2,0);ctx.lineTo(canvas.width/2,canvas.height);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,canvas.height/2);ctx.lineTo(canvas.width,canvas.height/2);ctx.stroke();
+  const [vx0,vy0]=s2c([0.5,0]),[vx1,vy1]=s2c([0.5,1]),[hx0,hy0]=s2c([0,0.5]),[hx1,hy1]=s2c([1,0.5]);
+  ctx.beginPath();ctx.moveTo(vx0,vy0);ctx.lineTo(vx1,vy1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(hx0,hy0);ctx.lineTo(hx1,hy1);ctx.stroke();
 }
 
 // ── mouse ─────────────────────────────────────────────────────────────────────
@@ -755,9 +857,9 @@ canvas.addEventListener('mousemove',e=>{
   const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   const[nx,ny]=c2s(mx,my);
   document.getElementById('coords').textContent=`${(nx*OW).toFixed(0)}, ${(ny*OH).toFixed(0)} px  (${nx.toFixed(3)}, ${ny.toFixed(3)})`;
-  sendMapCursor(Math.max(0,Math.min(1,nx)),Math.max(0,Math.min(1,ny)));
+  sendMapCursor(clampMap(nx),clampMap(ny));
   if(!drag)return;
-  surfaces[drag.s].corners[drag.c]=[Math.max(0,Math.min(1,nx)),Math.max(0,Math.min(1,ny))];
+  surfaces[drag.s].corners[drag.c]=[clampMap(nx),clampMap(ny)];
   draw();
 });
 canvas.addEventListener('mouseup',()=>{if(drag){save();drag=null}});
@@ -1171,6 +1273,100 @@ async function zonesSave(){
     document.getElementById('zones-status').textContent='✓';
     setTimeout(()=>document.getElementById('zones-status').textContent='●',800);
   }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CAMERA TAB
+// ══════════════════════════════════════════════════════════════
+let _cameraReady=false;
+
+function cameraInit(){
+  const input=document.getElementById('camera-url');
+  const saved=localStorage.getItem('ii.camera.url')||'';
+  if(input&&!input.value)input.value=saved;
+  if(input&&!input.value&&location.hostname){
+    input.value=`http://${location.hostname}:81/stream`;
+  }
+  setTimeout(()=>input&&input.focus(),50);
+}
+
+function cameraKey(e){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    cameraConnect();
+  }
+}
+
+function cameraSetStatus(text,kind){
+  const st=document.getElementById('camera-status');
+  st.textContent=text;
+  st.classList.toggle('ok',kind==='ok');
+  st.classList.toggle('warn',kind==='warn');
+}
+
+function cameraSetUrl(url){
+  document.getElementById('camera-url').value=url;
+  cameraConnect();
+}
+
+function cameraUsePath(path){
+  const input=document.getElementById('camera-url');
+  const cur=(input.value||'').trim();
+  let base='';
+  try{
+    const u=new URL(cur||`http://${location.hostname}`);
+    base=`${u.protocol}//${u.hostname}`;
+  }catch(e){
+    base=`http://${location.hostname}`;
+  }
+  if(path.startsWith(':')){
+    input.value=base+path;
+  }else{
+    input.value=base+path;
+  }
+  cameraConnect();
+}
+
+function cameraConnect(){
+  const input=document.getElementById('camera-url');
+  const img=document.getElementById('camera-stream');
+  const empty=document.getElementById('camera-empty');
+  let url=(input.value||'').trim();
+  if(!url){
+    cameraSetStatus('missing url','warn');
+    return;
+  }
+  if(!/^https?:\/\//i.test(url))url='http://'+url;
+  input.value=url;
+  localStorage.setItem('ii.camera.url',url);
+  _cameraReady=false;
+  cameraSetStatus('connecting','');
+  empty.style.display='none';
+  img.style.display='block';
+  img.src=url+(url.includes('?')?'&':'?')+'t='+Date.now();
+  setTimeout(()=>{
+    if(!_cameraReady&&activeTab==='camera')cameraSetStatus('waiting for frames','warn');
+  },2500);
+}
+
+function cameraStop(){
+  const img=document.getElementById('camera-stream');
+  img.removeAttribute('src');
+  img.style.display='none';
+  document.getElementById('camera-empty').style.display='block';
+  cameraSetStatus('stopped','');
+}
+
+function cameraLoaded(){
+  _cameraReady=true;
+  cameraSetStatus('live','ok');
+}
+
+function cameraError(){
+  _cameraReady=false;
+  document.getElementById('camera-stream').style.display='none';
+  document.getElementById('camera-empty').style.display='block';
+  cameraSetStatus('stream error','warn');
 }
 </script>
 <!-- ════════════════════════════════════════

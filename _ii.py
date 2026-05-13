@@ -301,13 +301,19 @@ class NodeEngine:
             if self.midi:
                 self.midi_values = dict(self.midi.values)
 
-            # Merge: DEFAULTS < node_state < MIDI < manual overrides
+            # Merge: DEFAULTS < portal/control file < node_state < MIDI < manual overrides
+            external_state = load_json(CTRL_PATH, {})
             merged = dict(DEFAULTS)
+            merged.update(external_state)
             merged.update(node_state)
             merged.update(self.midi_values)
             merged.update(self.overrides)
             if 'mode' in self.overrides:
                 merged['mode_lock'] = True
+            try:
+                self._map_idx = int(merged.get('mapping', self._map_idx)) % max(1, len(self._mappings))
+            except Exception:
+                pass
             self.state = merged
 
             write_ctrl(self.state)

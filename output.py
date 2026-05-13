@@ -102,7 +102,7 @@ def _fwd(u, v, tl, tr, bl, br):
 def _pixel_corners(s, sw, sh):
     """Return (tl, tr, bl, br) in pixel coords from a surface dict."""
     raw = s.get('corners', [])
-    if len(raw) == 4 and all(0.0 <= raw[i][j] <= 1.0 for i in range(4) for j in range(2)):
+    if len(raw) == 4 and all(-2.0 <= raw[i][j] <= 2.0 for i in range(4) for j in range(2)):
         tl, tr, br, bl = raw   # normalized [TL,TR,BR,BL] from map_server.py
         return ((tl[0]*sw, tl[1]*sh), (tr[0]*sw, tr[1]*sh),
                 (bl[0]*sw, bl[1]*sh), (br[0]*sw, br[1]*sh))

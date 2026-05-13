@@ -262,17 +262,31 @@ class Engine:
             return
         if not (0 <= tx < self.w and 0 <= ty < self.render_h):
             return
-        line_col = C['dim']
-        center_col = C['white']
-        for x in range(self.w):
-            if x != tx:
+        line_col = C['cyan']
+        center_col = C['magenta']
+        for dx in range(-4, 5):
+            x = tx + dx
+            if 0 <= x < self.w and dx != 0:
                 self.buf[ty][x] = ('─', line_col)
-        for y in range(self.render_h):
-            if y != ty:
+        for dy in range(-2, 3):
+            y = ty + dy
+            if 0 <= y < self.render_h and dy != 0:
                 self.buf[y][tx] = ('│', line_col)
         self.buf[ty][tx] = ('╋', center_col)
 
     _MAP_SURF_COLORS = ['cyan', 'yellow', 'magenta', 'green', 'red', 'blue']
+
+    @staticmethod
+    def _point_in_poly(px, py, pts):
+        inside = False
+        j = len(pts) - 1
+        for i, (xi, yi) in enumerate(pts):
+            xj, yj = pts[j]
+            if ((yi > py) != (yj > py)
+                    and px < (xj - xi) * (py - yi) / max(0.000001, yj - yi) + xi):
+                inside = not inside
+            j = i
+        return inside
 
     def _render_map_view(self):
         self._clear_buf(self.buf)
@@ -308,25 +322,44 @@ class Engine:
             if len(corners) < 4:
                 continue
             is_sel = si == selected
-            col = C['white'] if is_sel else C[self._MAP_SURF_COLORS[si % len(self._MAP_SURF_COLORS)]]
-            edge_ch = '▓' if is_sel else '░'
+            col = C[self._MAP_SURF_COLORS[si % len(self._MAP_SURF_COLORS)]]
+            edge_col = C['white'] if is_sel else col
 
             pts = []
             for nx, ny in corners:
                 pts.append((int(float(nx) * (w - 1)), int(float(ny) * (h - 1))))
 
+            min_x = max(0, min(x for x, _ in pts))
+            max_x = min(w - 1, max(x for x, _ in pts))
+            min_y = max(0, min(y for _, y in pts))
+            max_y = min(h - 1, max(y for _, y in pts))
+            fill_ch = '█'
+            for y in range(min_y, max_y + 1):
+                for x in range(min_x, max_x + 1):
+                    if self._point_in_poly(x + 0.5, y + 0.5, pts):
+                        self.buf[y][x] = (fill_ch, col)
+
             for i in range(4):
                 x0, y0 = pts[i]
                 x1, y1 = pts[(i + 1) % 4]
+                dx, dy = x1 - x0, y1 - y0
+                if abs(dx) > abs(dy) * 2:
+                    edge_ch = '━' if is_sel else '─'
+                elif abs(dy) > abs(dx) * 2:
+                    edge_ch = '┃' if is_sel else '│'
+                elif dx * dy >= 0:
+                    edge_ch = '╲'
+                else:
+                    edge_ch = '╱'
                 for bx, by in bresenham(x0, y0, x1, y1):
                     if 0 <= bx < w and 0 <= by < h:
-                        self.buf[by][bx] = (edge_ch, col)
+                        self.buf[by][bx] = (edge_ch, edge_col)
 
             for ci, (tx, ty) in enumerate(pts):
                 if 0 <= tx < w and 0 <= ty < h:
                     self.buf[ty][tx] = ('◆' if is_sel else '·', C['white'])
                 if is_sel and 0 <= tx + 1 < w and 1 <= ty < h:
-                    self.buf[ty - 1][tx + 1] = (str(ci + 1), col)
+                    self.buf[ty - 1][tx + 1] = (str(ci + 1), edge_col)
 
             cx_t = sum(p[0] for p in pts) // 4
             cy_t = sum(p[1] for p in pts) // 4
@@ -335,7 +368,7 @@ class Engine:
             if 0 <= cy_t < h:
                 for i, ch in enumerate(label):
                     if 0 <= lx + i < w:
-                        self.buf[cy_t][lx + i] = (ch, col)
+                        self.buf[cy_t][lx + i] = (ch, edge_col)
 
     def run(self):
         sys.stdout.write(HIDE + CLEAR)
@@ -431,11 +464,13 @@ class Engine:
 
                 t_now = time.time() - self.t0
                 if c.get('map_mode'):
+                    mapped_output = False
                     self._render_map_view()
                 else:
+                    mapped_output = False
                     mapping = self._active_mapping()
                     if mapping and render_zones(self.buf, self.w, self.render_h, self.modes, self.mode, mapping, merged, self.pal, syms, t_now, self.frame):
-                        pass
+                        mapped_output = True
                     else:
                         self.modes[self.mode].render(self.buf_a, self.w, self.render_h, t_now, self.frame, merged, self.pal, syms)
                         if self.layer_b_enabled:
@@ -450,13 +485,13 @@ class Engine:
                     audio_peak = float(merged.get('audio_peak', 0.0) or 0.0)
                     beat_kick = max(0.0, 1.0 - beat_phase * 5.0) if beat_phase < 0.2 else 0.0
                     zoom = 1.0 + beat_kick * 0.07 + audio_peak * 0.09
-                    if zoom > 1.005:
+                    if zoom > 1.005 and not mapped_output:
                         self._zoom_buf(zoom)
-                    if self._trans_frames > 0:
+                    if self._trans_frames > 0 and not mapped_output:
                         self._apply_transition_overlay()
 
                 flash_text = c.get('flash_text', '')
-                if c.get('flash_active') and flash_text:
+                if c.get('flash_active') and flash_text and not mapped_output:
                     self._flash(flash_text)
 
                 self._draw_map_cursor()
