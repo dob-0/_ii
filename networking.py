@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 """Network status and station/hotspot helpers for the ii web panel."""
 
+import json
 import os
 import socket
 import subprocess
+import tempfile
 import time
 
 
 NETWORKMANAGER_CONF = '/etc/NetworkManager/NetworkManager.conf'
+NETWORK_PREFS_PATH = os.path.join(os.path.dirname(__file__), 'network_prefs.json')
 DEFAULT_HOTSPOT_SSID = 'ii-hotspot'
 DEFAULT_HOTSPOT_PASSWORD = 'iiiiiiii'
+AUTO_HOTSPOT_COOLDOWN = 20.0
+AUTO_HOTSPOT_SNOOZE_SECONDS = 300.0
+
+_LAST_AUTO_HOTSPOT_ATTEMPT = 0.0
 
 
 def _run(cmd, timeout=12):
@@ -104,15 +111,64 @@ def _setup_commands():
     ]
 
 
+def _load_json(path, default):
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def _save_json_atomic(path, data):
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(prefix=os.path.basename(path) + '.', suffix='.tmp', dir=os.path.dirname(path) or '.')
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        if tmp and os.path.exists(tmp):
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+
+def _default_prefs():
+    return {
+        'auto_hotspot_enabled': True,
+        'hotspot_ssid': DEFAULT_HOTSPOT_SSID,
+        'hotspot_password': DEFAULT_HOTSPOT_PASSWORD,
+        'auto_hotspot_snooze_until': 0.0,
+    }
+
+
+def _load_prefs():
+    prefs = dict(_default_prefs())
+    prefs.update(_load_json(NETWORK_PREFS_PATH, {}))
+    return prefs
+
+
+def _save_prefs(prefs):
+    current = dict(_default_prefs())
+    current.update(prefs or {})
+    _save_json_atomic(NETWORK_PREFS_PATH, current)
+    return current
+
+
 def _base_status():
+    prefs = _load_prefs()
     state = {
         'ok': True,
         'msg': '',
         'hostname': socket.gethostname(),
         'updated_at': time.time(),
+        'prefs': prefs,
         'hotspot_defaults': {
-            'ssid': DEFAULT_HOTSPOT_SSID,
-            'password': DEFAULT_HOTSPOT_PASSWORD,
+            'ssid': prefs.get('hotspot_ssid', DEFAULT_HOTSPOT_SSID),
+            'password': prefs.get('hotspot_password', DEFAULT_HOTSPOT_PASSWORD),
         },
         'setup_commands': _setup_commands(),
     }
@@ -175,6 +231,8 @@ def _base_status():
     state['scan_ready'] = state['control_ready'] and scan_perm in ('yes', 'auth')
     state['hotspot_ready'] = state['control_ready'] and (share_open in ('yes', 'auth') or share_protected in ('yes', 'auth'))
     state['requires_setup'] = not state['wifi_managed'] or state.get('managed_config') is False
+    state['auto_hotspot_enabled'] = bool(prefs.get('auto_hotspot_enabled', True))
+    state['auto_hotspot_snoozed'] = float(prefs.get('auto_hotspot_snooze_until', 0.0) or 0.0) > time.time()
 
     if not state['wifi_iface']:
         state['msg'] = state['msg'] or 'No Wi-Fi adapter detected.'
@@ -186,6 +244,66 @@ def _base_status():
         state['msg'] = state['msg'] or 'Wi-Fi interface is present, but NetworkManager control is not available.'
 
     return state
+
+
+def _has_external_uplink(state):
+    for conn in state.get('active_connections', []):
+        ctype = conn.get('type', '')
+        if ctype in ('loopback', ''):
+            continue
+        if conn.get('device') == state.get('wifi_iface') and state.get('wifi_mode') == 'ap':
+            continue
+        return True
+    return False
+
+
+def _auto_hotspot_reason(state):
+    prefs = state.get('prefs', {})
+    if not prefs.get('auto_hotspot_enabled', True):
+        return 'disabled'
+    if state.get('hotspot_active'):
+        return 'already_active'
+    if state.get('requires_setup'):
+        return 'requires_setup'
+    if not state.get('hotspot_ready'):
+        return 'not_ready'
+    if _has_external_uplink(state):
+        return 'uplink_present'
+    if state.get('wifi_active') and state.get('wifi_mode') != 'ap':
+        return 'wifi_connected'
+    if float(prefs.get('auto_hotspot_snooze_until', 0.0) or 0.0) > time.time():
+        return 'snoozed'
+    return ''
+
+
+def _start_hotspot(iface, ssid, password):
+    cmd = ['nmcli', 'device', 'wifi', 'hotspot', 'ifname', iface, 'ssid', ssid, 'password', password]
+    return _run(cmd, timeout=45)
+
+
+def _ensure_auto_hotspot(state):
+    global _LAST_AUTO_HOTSPOT_ATTEMPT
+    reason = _auto_hotspot_reason(state)
+    state['auto_hotspot_reason'] = reason
+    if reason:
+        return state
+
+    now = time.time()
+    if now - _LAST_AUTO_HOTSPOT_ATTEMPT < AUTO_HOTSPOT_COOLDOWN:
+        state['auto_hotspot_reason'] = 'cooldown'
+        return state
+    _LAST_AUTO_HOTSPOT_ATTEMPT = now
+
+    iface = state.get('wifi_iface', '')
+    prefs = state.get('prefs', {})
+    ssid = str(prefs.get('hotspot_ssid', DEFAULT_HOTSPOT_SSID) or DEFAULT_HOTSPOT_SSID)
+    password = str(prefs.get('hotspot_password', DEFAULT_HOTSPOT_PASSWORD) or DEFAULT_HOTSPOT_PASSWORD)
+    ok, out, err = _start_hotspot(iface, ssid, password)
+    latest = _base_status()
+    latest['auto_hotspot_reason'] = 'started' if ok else 'failed'
+    latest['msg'] = out or err or ('Auto hotspot started.' if ok else 'Auto hotspot failed.')
+    latest['ok'] = ok
+    return latest
 
 
 def _scan_networks(iface):
@@ -222,6 +340,7 @@ def _scan_networks(iface):
 
 def network_status(include_scan=False):
     state = _base_status()
+    state = _ensure_auto_hotspot(state)
     if include_scan and state.get('wifi_iface') and state.get('scan_ready'):
         ok, networks, err = _scan_networks(state['wifi_iface'])
         state['networks'] = networks
@@ -253,6 +372,27 @@ def network_action(body):
         return state
     iface = iface_or_msg if ok else state.get('wifi_iface', '')
 
+    if action == 'save_settings':
+        prefs = dict(state.get('prefs', {}))
+        if 'auto_hotspot_enabled' in body:
+            prefs['auto_hotspot_enabled'] = bool(body.get('auto_hotspot_enabled'))
+            if not prefs['auto_hotspot_enabled']:
+                prefs['auto_hotspot_snooze_until'] = 0.0
+        if 'ssid' in body:
+            prefs['hotspot_ssid'] = str(body.get('ssid', '') or '').strip() or DEFAULT_HOTSPOT_SSID
+        if 'password' in body:
+            password = str(body.get('password', '') or '').strip() or DEFAULT_HOTSPOT_PASSWORD
+            if len(password) < 8:
+                state['ok'] = False
+                state['msg'] = 'Hotspot password must be at least 8 characters.'
+                return state
+            prefs['hotspot_password'] = password
+        _save_prefs(prefs)
+        latest = network_status(include_scan=False)
+        latest['msg'] = 'Network settings saved.'
+        latest['ok'] = True
+        return latest
+
     if action == 'scan':
         if not state.get('scan_ready'):
             state['ok'] = False
@@ -266,6 +406,9 @@ def network_action(body):
         return state
 
     if action == 'connect':
+        prefs = dict(state.get('prefs', {}))
+        prefs['auto_hotspot_snooze_until'] = 0.0
+        _save_prefs(prefs)
         ssid = str(body.get('ssid', '') or '').strip()
         password = str(body.get('password', '') or '')
         if not ssid:
@@ -282,20 +425,28 @@ def network_action(body):
         return latest
 
     if action == 'hotspot_start':
-        ssid = str(body.get('ssid', '') or '').strip() or DEFAULT_HOTSPOT_SSID
-        password = str(body.get('password', '') or '').strip() or DEFAULT_HOTSPOT_PASSWORD
+        prefs = dict(state.get('prefs', {}))
+        ssid = str(body.get('ssid', '') or '').strip() or prefs.get('hotspot_ssid', DEFAULT_HOTSPOT_SSID)
+        password = str(body.get('password', '') or '').strip() or prefs.get('hotspot_password', DEFAULT_HOTSPOT_PASSWORD)
         if len(password) < 8:
             state['ok'] = False
             state['msg'] = 'Hotspot password must be at least 8 characters.'
             return state
-        cmd = ['nmcli', 'device', 'wifi', 'hotspot', 'ifname', iface, 'ssid', ssid, 'password', password]
-        ok, out, err = _run(cmd, timeout=45)
+        prefs['hotspot_ssid'] = ssid
+        prefs['hotspot_password'] = password
+        prefs['auto_hotspot_snooze_until'] = 0.0
+        _save_prefs(prefs)
+        ok, out, err = _start_hotspot(iface, ssid, password)
         latest = network_status(include_scan=False)
         latest['ok'] = ok
         latest['msg'] = out or err or ('Hotspot started.' if ok else 'Hotspot start failed.')
         return latest
 
     if action == 'hotspot_stop':
+        prefs = dict(state.get('prefs', {}))
+        if prefs.get('auto_hotspot_enabled', True):
+            prefs['auto_hotspot_snooze_until'] = time.time() + AUTO_HOTSPOT_SNOOZE_SECONDS
+            _save_prefs(prefs)
         active = state.get('wifi_active') or {}
         if active.get('uuid'):
             cmd = ['nmcli', 'connection', 'down', 'uuid', active['uuid']]

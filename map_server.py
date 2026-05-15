@@ -701,10 +701,14 @@ canvas{cursor:crosshair}
     </div>
     <div class="network-card">
       <h3>HOTSPOT</h3>
+      <label class="toggle-wrap">
+        <input type="checkbox" class="toggle" id="auto-hotspot-toggle" onchange="networkSaveSettings()">
+        AUTO HOTSPOT
+      </label>
       <label>HOTSPOT NAME</label>
-      <input type="text" id="hotspot-ssid" placeholder="ii-hotspot">
+      <input type="text" id="hotspot-ssid" placeholder="ii-hotspot" onchange="networkSaveSettings()">
       <label>HOTSPOT PASSWORD</label>
-      <input type="text" id="hotspot-password" placeholder="minimum 8 chars">
+      <input type="text" id="hotspot-password" placeholder="minimum 8 chars" onchange="networkSaveSettings()">
       <div class="network-actions">
         <button class="cbtn" onclick="networkHotspotStart()">START HOTSPOT</button>
         <button class="cbtn" onclick="networkHotspotStop()">STOP HOTSPOT</button>
@@ -1335,6 +1339,13 @@ function networkHotspotStop(){
   networkAction('hotspot_stop');
 }
 
+function networkSaveSettings(){
+  const autoHotspot=!!document.getElementById('auto-hotspot-toggle').checked;
+  const ssid=(document.getElementById('hotspot-ssid').value||'').trim();
+  const password=(document.getElementById('hotspot-password').value||'').trim();
+  networkAction('save_settings',{auto_hotspot_enabled:autoHotspot,ssid,password});
+}
+
 function chooseNetworkSsid(ssid){
   document.getElementById('network-ssid').value=ssid||'';
 }
@@ -1362,11 +1373,17 @@ function renderNetwork(data){
   document.getElementById('network-setup').textContent=(data.setup_commands||[]).join('\n');
 
   const hsDefaults=data.hotspot_defaults||{};
+  const prefs=data.prefs||{};
+  document.getElementById('auto-hotspot-toggle').checked=!!(prefs.auto_hotspot_enabled);
   syncTextInput('hotspot-ssid',hsDefaults.ssid||'ii-hotspot');
   syncTextInput('hotspot-password',hsDefaults.password||'iiiiiiii');
   document.getElementById('hotspot-note').textContent=data.hotspot_active
     ? `Hotspot is active on ${data.wifi_iface||'wifi'}.`
-    : (data.hotspot_ready ? 'Hotspot control is available.' : 'Hotspot start may require local policy/root permission.');
+    : (
+      data.auto_hotspot_enabled
+        ? (data.auto_hotspot_snoozed ? 'Auto hotspot is snoozed after a manual stop.' : 'Auto hotspot will kick in when no uplink is available.')
+        : (data.hotspot_ready ? 'Hotspot control is available.' : 'Hotspot start may require local policy/root permission.')
+    );
 
   const list=document.getElementById('network-wifi-list');
   const networks=data.networks||[];

@@ -10,4 +10,5 @@ __pycache__/
 .claude/
 display_assign.json
 cues.json
+network_prefs.json
 media/
