@@ -45,7 +45,7 @@ GRAPH = [
     BoolOut('camera2_online', CAM_SIDE_PRESENCE),
 
     # ── Mode flow: beat structure plus manual overrides from ii.py ───────────
-    IntOut('mode',    Seq([17, 18, 7, 8, 3, 9, 14, 5, 16], beats=8)),
+    IntOut('mode',    Seq([17, 18, 19, 21, 7, 8, 3, 9, 14, 5, 16], beats=8)),
     IntOut('mode_b',  Select([Const(3), Const(13), Const(11), Const(12)], Scale(CAM_SIDE_MOTION, out_min=0, out_max=3.99))),
 
     # ── Palette: slow cycle, with camera brightness able to pull it around ───

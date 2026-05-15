@@ -632,6 +632,7 @@ function switchTab(t){
   });
   if(t==='map'){resize();_enterMapTab();}
   if(t==='ctrl'){startCtrlPoll();}
+  else{stopCtrlPoll();}
   if(t==='zones'){fetchMedia().then(()=>zonesInit());}
   if(t==='camera'){cameraInit();}
   if(t==='media'){mediaLoad();mediaStatusPoll();}
@@ -944,6 +945,7 @@ let ctrlState={};   // last known control.json
 let ctrlPollTimer=null;
 let ctrlPollActive=false;
 let flashTimer=null;
+let ctrlPending={};
 
 // tap tempo state
 let tapTimes=[];
@@ -985,14 +987,18 @@ function buildPaletteGrid(){
 // Send a partial update to control.json
 async function ctrlSet(key,value){
   const patch={};patch[key]=value;
+  ctrlPending={...ctrlPending,...patch};
+  applyCtrlToUI({...ctrlState,...patch});
   try{
     await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+    Object.keys(patch).forEach(k=>delete ctrlPending[k]);
   }catch(e){console.warn('ctrlSet failed',e)}
 }
 
 // Apply full ctrl state to UI (called after each poll)
 function applyCtrlToUI(c){
-  ctrlState=c;
+  ctrlState={...c,...ctrlPending};
+  c=ctrlState;
 
   // modes
   const modeVal=c.mode??0;
@@ -1120,6 +1126,14 @@ function startCtrlPoll(){
   pollCtrl();
 }
 
+function stopCtrlPoll(){
+  ctrlPollActive=false;
+  if(ctrlPollTimer){
+    clearTimeout(ctrlPollTimer);
+    ctrlPollTimer=null;
+  }
+}
+
 async function pollCtrl(){
   if(!ctrlPollActive)return;
   try{
@@ -1146,7 +1160,7 @@ async function pollCtrl(){
   }catch(e){
     document.getElementById('cs-poll').style.color='#aa3333';
   }
-  setTimeout(pollCtrl,500);
+  ctrlPollTimer=setTimeout(pollCtrl,500);
 }
 
 // ── init ctrl UI ──────────────────────────────────────────────
