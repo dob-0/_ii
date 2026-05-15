@@ -125,7 +125,7 @@ button{background:var(--bg2);border:1px solid var(--border2);color:var(--text2);
 button:hover{background:var(--bg3);border-color:var(--border3)}
 .btn-del{border-color:#3a1515;color:var(--red)}.btn-ok{border-color:#153a15;color:var(--green)}
 #wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#040404;position:relative}
-canvas{cursor:crosshair;image-rendering:pixelated}
+canvas{cursor:crosshair}
 #bar{position:fixed;bottom:0;left:0;right:0;background:#0a0a0a;border-top:1px solid #1a1a1a;padding:4px 12px;font-size:10px;color:#444;display:flex;gap:16px}
 
 /* ════════════════════════════════════════
@@ -183,6 +183,8 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 .flash-row{display:flex;gap:6px}
 .flash-row input{flex:1;background:#0a0a0a;border:1px solid var(--border2);color:var(--text2);padding:6px 8px;font-family:monospace;font-size:11px;border-radius:2px}
 .flash-row button{width:auto;padding:6px 14px;letter-spacing:1px}
+.ctrl-stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.ctrl-stack label{margin-top:0}
 
 /* blackout */
 #blackout-btn{width:100%;padding:18px;font-size:14px;letter-spacing:4px;border:2px solid #3a1515;color:#aa3333;background:var(--bg2);border-radius:3px;cursor:pointer;font-family:monospace;transition:background .1s,border-color .1s,color .1s}
@@ -537,6 +539,42 @@ canvas{cursor:crosshair;image-rendering:pixelated}
       </div>
     </div>
 
+    <div class="ctrl-section" style="grid-column:1/-1">
+      <h3>EVENT COPY</h3>
+      <div class="ctrl-stack">
+        <div>
+          <label>TITLE</label>
+          <input type="text" id="event-title" placeholder="SYNAPSE"
+                 oninput="ctrlSet('event_title',this.value)">
+        </div>
+        <div>
+          <label>KICKER</label>
+          <input type="text" id="event-kicker" placeholder="HAYFILM ->"
+                 oninput="ctrlSet('event_kicker',this.value)">
+        </div>
+        <div>
+          <label>WHEN</label>
+          <input type="text" id="event-when" placeholder="MAY 15"
+                 oninput="ctrlSet('event_when',this.value)">
+        </div>
+        <div>
+          <label>WHERE</label>
+          <input type="text" id="event-where" placeholder="STUDIO"
+                 oninput="ctrlSet('event_where',this.value)">
+        </div>
+        <div style="grid-column:1/-1">
+          <label>LINEUP (use | between names)</label>
+          <input type="text" id="event-lineup" placeholder="UVALL [GE]|HONNELOOK|SCRIPT [GE]|FUKUMACHI [GE]"
+                 oninput="ctrlSet('event_lineup',this.value)">
+        </div>
+        <div style="grid-column:1/-1">
+          <label>FOOTER</label>
+          <input type="text" id="event-footer" placeholder="SCIENCE AND SPIRIT"
+                 oninput="ctrlSet('event_footer',this.value)">
+        </div>
+      </div>
+    </div>
+
     <!-- BLACKOUT -->
     <div class="ctrl-section">
       <h3>BLACKOUT</h3>
@@ -559,6 +597,7 @@ canvas{cursor:crosshair;image-rendering:pixelated}
 //  SHARED STATE
 // ══════════════════════════════════════════════════════════════
 const OW=1366,OH=768,MAP_OVERSCAN=0.25,MAP_MIN=-0.25,MAP_MAX=1.25;
+let canvasW=1,canvasH=1,canvasDpr=1;
 let SCALE=1,surfaces=[],sel=-1,drag=null,MODES=[],curFile='fb_map.json';
 const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
 const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22','#ff6644'];
@@ -641,8 +680,19 @@ document.addEventListener('keydown',e=>{
 
 function resize(){
   const w=document.getElementById('wrap');
-  SCALE=Math.min((w.clientWidth-40)/OW,(w.clientHeight-60)/OH);
-  canvas.width=Math.round(OW*SCALE);canvas.height=Math.round(OH*SCALE);
+  SCALE=Math.max(0.1,Math.min((w.clientWidth-40)/OW,(w.clientHeight-60)/OH));
+  canvasW=Math.max(1,Math.round(OW*SCALE));
+  canvasH=Math.max(1,Math.round(OH*SCALE));
+  canvasDpr=Math.max(1,window.devicePixelRatio||1);
+  canvas.style.width=`${canvasW}px`;
+  canvas.style.height=`${canvasH}px`;
+  canvas.width=Math.max(1,Math.round(canvasW*canvasDpr));
+  canvas.height=Math.max(1,Math.round(canvasH*canvasDpr));
+  ctx.setTransform(canvasDpr,0,0,canvasDpr,0,0);
+  ctx.imageSmoothingEnabled=true;
+  if('imageSmoothingQuality' in ctx)ctx.imageSmoothingQuality='high';
+  ctx.lineJoin='round';
+  ctx.lineCap='round';
   draw();
 }
 
@@ -745,12 +795,12 @@ function renderSide(){
 
 // ── canvas ────────────────────────────────────────────────────────────────────
 const s2c=([nx,ny])=>[
-  ((nx+MAP_OVERSCAN)/(1+MAP_OVERSCAN*2))*canvas.width,
-  ((ny+MAP_OVERSCAN)/(1+MAP_OVERSCAN*2))*canvas.height
+  ((nx+MAP_OVERSCAN)/(1+MAP_OVERSCAN*2))*canvasW,
+  ((ny+MAP_OVERSCAN)/(1+MAP_OVERSCAN*2))*canvasH
 ];
 const c2s=(cx,cy)=>[
-  (cx/canvas.width)*(1+MAP_OVERSCAN*2)-MAP_OVERSCAN,
-  (cy/canvas.height)*(1+MAP_OVERSCAN*2)-MAP_OVERSCAN
+  (cx/canvasW)*(1+MAP_OVERSCAN*2)-MAP_OVERSCAN,
+  (cy/canvasH)*(1+MAP_OVERSCAN*2)-MAP_OVERSCAN
 ];
 const clampMap=v=>Math.max(MAP_MIN,Math.min(MAP_MAX,v));
 function rgba(hex,a){
@@ -759,19 +809,16 @@ function rgba(hex,a){
   return `rgba(${r},${g},${b},${a})`;
 }
 function fillQuad(pts,color){
+  ctx.beginPath();
+  ctx.moveTo(...pts[0]);
+  pts.slice(1).forEach(p=>ctx.lineTo(...p));
+  ctx.closePath();
   ctx.fillStyle=color;
-  [[0,1,2],[0,2,3]].forEach(([a,b,c])=>{
-    ctx.beginPath();
-    ctx.moveTo(...pts[a]);
-    ctx.lineTo(...pts[b]);
-    ctx.lineTo(...pts[c]);
-    ctx.closePath();
-    ctx.fill();
-  });
+  ctx.fill();
 }
 
 function draw(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,canvasW,canvasH);
   ctx.strokeStyle='#0c0c0c';ctx.lineWidth=0.5;
   [.1,.2,.3,.4,.5,.6,.7,.8,.9].forEach(t=>{
     const [gx0,gy0]=s2c([t,0]),[gx1,gy1]=s2c([t,1]),[hx0,hy0]=s2c([0,t]),[hx1,hy1]=s2c([1,t]);
@@ -989,6 +1036,19 @@ function applyCtrlToUI(c){
   // blackout
   const bb=document.getElementById('blackout-btn');
   if(bb)bb.classList.toggle('on',!!(c.blackout));
+
+  syncTextInput('flash-input',c.flash_text??'MOCT');
+  syncTextInput('event-title',c.event_title??'');
+  syncTextInput('event-kicker',c.event_kicker??'');
+  syncTextInput('event-when',c.event_when??'');
+  syncTextInput('event-where',c.event_where??'');
+  syncTextInput('event-lineup',c.event_lineup??'');
+  syncTextInput('event-footer',c.event_footer??'');
+}
+
+function syncTextInput(id,value){
+  const el=document.getElementById(id);
+  if(el&&document.activeElement!==el)el.value=value??'';
 }
 
 function sliderChange(key,value,valId){

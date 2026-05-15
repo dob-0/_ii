@@ -1,70 +1,86 @@
 import math
 import random
+import re
 
-from modes.base import C, Mode, PALETTES
-
-BLOCK5 = {
-    'M': ['█   █', '██ ██', '█ █ █', '█   █', '█   █'],
-    'O': [' ███ ', '█   █', '█   █', '█   █', ' ███ '],
-    'C': [' ████', '█    ', '█    ', '█    ', ' ████'],
-    'T': ['█████', '  █  ', '  █  ', '  █  ', '  █  '],
-    '7': ['█████', '   █ ', '  ██ ', ' █   ', '█    '],
-    'H': ['█   █', '█   █', '█████', '█   █', '█   █'],
-    'A': [' ███ ', '█   █', '█████', '█   █', '█   █'],
-    'Y': ['█   █', ' █ █ ', '  █  ', '  █  ', '  █  '],
-    'F': ['█████', '█    ', '████ ', '█    ', '█    '],
-    'I': ['███  ', ' █   ', ' █   ', ' █   ', '███  '],
-    'L': ['█    ', '█    ', '█    ', '█    ', '█████'],
-    'S': [' ████', '█    ', ' ███ ', '    █', '████ '],
-    'U': ['█   █', '█   █', '█   █', '█   █', ' ███ '],
-    'D': ['████ ', '█   █', '█   █', '█   █', '████ '],
-    'R': ['████ ', '█   █', '████ ', '█ █  ', '█  ██'],
-    'E': ['█████', '█    ', '████ ', '█    ', '█████'],
-    'B': ['████ ', '█   █', '████ ', '█   █', '████ '],
-    'N': ['█   █', '██  █', '█ █ █', '█  ██', '█   █'],
-    'G': [' ████', '█    ', '█  ██', '█   █', ' ████'],
-    'P': ['████ ', '█   █', '████ ', '█    ', '█    '],
-    'V': ['█   █', '█   █', '█   █', ' █ █ ', '  █  '],
-    'W': ['█   █', '█   █', '█ █ █', '██ ██', '█   █'],
-    'X': ['█   █', ' █ █ ', '  █  ', ' █ █ ', '█   █'],
-    'Z': ['█████', '   █ ', '  █  ', ' █   ', '█████'],
-    'K': ['█   █', '█  █ ', '███  ', '█  █ ', '█   █'],
-    'J': ['  ███', '   █ ', '   █ ', '█  █ ', ' ██  '],
-    '&': [' ██  ', '█  █ ', ' ███ ', '█ █  ', ' ██ █'],
-    ' ': ['     ', '     ', '     ', '     ', '     '],
-    '-': ['     ', '     ', '███  ', '     ', '     '],
-}
+from modes.base import C, Mode
 
 
 class Poster(Mode):
     NAME = 'POSTER'
     ORDER = 18
 
-    WORDS = [
-        'MOCT', 'HAYFILM', 'STUDIO', 'BAR', 'PROJECTOR', 'BAK', 'YEREVAN',
+    DEFAULT_LINEUP = [
+        'UVALL [GE]', 'HONNELOOK', 'SCRIPT [GE]', 'FUKUMACHI [GE]', 'MTVARE [GE]',
+        'MARS', 'ICECHAIN', 'MA', 'LYUPEN', 'ISO',
     ]
 
-    def _block(self, buf, w, h, text, y0, col, scale=1):
-        gap = scale
-        char_w = 5 * scale + gap
-        total = len(text) * char_w - gap
-        x0 = max(0, (w - total) // 2)
-        for ci, ch in enumerate(text.upper()):
-            glyph = BLOCK5.get(ch, BLOCK5[' '])
-            cx = x0 + ci * char_w
-            for ri, row in enumerate(glyph):
-                y = y0 + ri
-                if y >= h:
-                    break
-                for gi, cell in enumerate(row):
-                    if cell == '█':
-                        for s in range(scale):
-                            self.put(buf, cx + gi * scale + s, y, '█', col, w, h)
-
     def _write(self, buf, w, h, x, y, text, col):
-        for i, ch in enumerate(text[: max(0, w - x)]):
+        if y < 0 or y >= h:
+            return
+        for i, ch in enumerate(text):
             if ch != ' ':
                 self.put(buf, x + i, y, ch, col, w, h)
+
+    def _hline(self, buf, w, h, x0, x1, y, ch, col):
+        if y < 0 or y >= h:
+            return
+        for x in range(max(0, x0), min(w, x1)):
+            self.put(buf, x, y, ch, col, w, h)
+
+    def _meta(self, cfg, key, fallback):
+        value = cfg.get(key)
+        if value is None:
+            return fallback
+        text = str(value).strip()
+        return text or fallback
+
+    def _lineup(self, cfg):
+        raw = self._meta(cfg, 'event_lineup', '|'.join(self.DEFAULT_LINEUP))
+        items = [part.strip() for part in re.split(r'[|\n]+', raw) if part.strip()]
+        return items or list(self.DEFAULT_LINEUP)
+
+    def _title_text(self, cfg):
+        title = self._meta(cfg, 'event_title', '') or self._meta(cfg, 'flash_text', 'SYNAPSE')
+        title = title.upper()
+        if ' ' not in title and len(title) <= 10:
+            return ' '.join(title)
+        return re.sub(r'\s+', ' ', title)
+
+    def _draw_blob(self, buf, w, h, tf, energy, primary, secondary, accent):
+        x0 = max(0, int(w * 0.44))
+        bodies = [
+            (w * 0.80, h * 0.35, w * 0.17, h * 0.13),
+            (w * 0.82, h * 0.55, w * 0.20, h * 0.15),
+            (w * 0.76, h * 0.77, w * 0.16, h * 0.12),
+        ]
+        for y in range(h):
+            for x in range(x0, w):
+                field = 0.0
+                for cx, cy, rx, ry in bodies:
+                    dx = (x - cx) / max(1.0, rx)
+                    dy = (y - cy) / max(1.0, ry)
+                    field += 1.0 / (0.24 + dx * dx + dy * dy)
+                ripple = (
+                    math.sin(x * 0.16 - tf * 2.0) * 0.18 +
+                    math.cos(y * 0.28 + tf * 1.5) * 0.18 +
+                    math.sin((x + y) * 0.12 + tf * 2.2) * 0.12
+                )
+                v = field + ripple * (0.8 + energy * 0.6)
+                if v <= 1.95:
+                    continue
+                sheen = math.sin((x * 0.32 - y * 0.18) + tf * 4.0)
+                if v > 4.8 or (v > 3.9 and sheen > 0.45):
+                    ch, col = '█', C['white']
+                elif v > 3.6:
+                    ch = random.choice(['█', '▓'])
+                    col = accent
+                elif v > 2.7:
+                    ch = random.choice(['▓', '▒'])
+                    col = secondary
+                else:
+                    ch = random.choice(['▒', '░'])
+                    col = primary
+                self.put(buf, x, y, ch, col, w, h)
 
     def render(self, buf, w, h, t, frame, cfg, pal, syms):
         audio = float(cfg.get('audio_level', 0.0) or 0.0)
@@ -75,95 +91,74 @@ class Poster(Mode):
         )
         energy = max(0.0, min(1.0, audio * 0.8 + peak * 0.45 + cam * 0.9))
         tf = frame * (0.025 + energy * 0.06)
+        fg = C['white']
+        primary = C[pal['p']]
+        secondary = C[pal['s']]
+        accent = C[pal['a']]
+        dark = C['dim']
+        title = self._title_text(cfg)
+        kicker = self._meta(cfg, 'event_kicker', 'HAYFILM ->').upper()
+        when = self._meta(cfg, 'event_when', 'MAY 15').upper()
+        where = self._meta(cfg, 'event_where', 'STUDIO').upper()
+        footer = self._meta(cfg, 'event_footer', 'SCIENCE AND SPIRIT').upper()
+        lineup = self._lineup(cfg)
 
-        palette = int(cfg.get('palette', 0) or 0) % len(PALETTES)
-        if palette == 1:
-            bg, fg, hot, dark = C['dim'],     C['white'],   C['yellow'],  C['dim']
-        elif palette == 2:
-            bg, fg, hot, dark = C['blue'],    C['white'],   C['cyan'],    C['dim']
-        elif palette == 3:
-            bg, fg, hot, dark = C['dim'],     C['magenta'], C['white'],   C['dim']
-        elif palette == 4:
-            bg, fg, hot, dark = C['dim'],     C['yellow'],  C['magenta'], C['dim']
-        elif palette == 5:
-            bg, fg, hot, dark = C['blue'],    C['cyan'],    C['magenta'], C['dim']
-        else:
-            bg, fg, hot, dark = C['dim'],     C['white'],   C['blue'],    C['dim']
-
-        # Glitch background
-        block = max(3, int(7 - energy * 4))
         for y in range(h):
             for x in range(w):
-                glitch = ((x // block + y // block + frame // 9) % 5 == 0)
-                stripe = (int((x + math.sin(y * 0.22 + tf) * 8) / max(2, block)) % 7 == 0)
-                if glitch and random.random() < 0.72:
-                    ch = random.choice(['█', '▓', '▒', ' '])
-                    buf[y][x] = (ch, bg if ch != ' ' else dark)
-                elif stripe and random.random() < 0.45:
-                    buf[y][x] = (random.choice(['.', '·', '░']), dark)
+                wave = math.sin(y * 0.18 + tf * 1.7 + x * 0.02)
+                if y % 4 == 0 and random.random() < 0.12 + energy * 0.10:
+                    buf[y][x] = (random.choice(['─', '·']), dark)
+                elif x > w * 0.50 and y > h * 0.28 and x < w * 0.72 and random.random() < 0.58 + wave * 0.08:
+                    buf[y][x] = (random.choice(['█', '▓', '▒']), primary)
                 else:
                     buf[y][x] = None
+        panel_x0 = max(0, int(w * 0.48))
+        panel_x1 = min(w, int(w * 0.73))
+        for y in range(int(h * 0.40), h):
+            for x in range(panel_x0, panel_x1):
+                if buf[y][x] is None or random.random() < 0.35:
+                    buf[y][x] = (random.choice(['█', '▓']), primary)
 
-        # Concentric arcs — MOCT/Tresor signature
-        cx = w * (0.50 + math.sin(tf * 0.9) * 0.06)
-        cy = h * 0.54
-        for band in range(6):
-            r = min(w, h * 2) * (0.18 + band * 0.07 + energy * 0.04)
-            steps = max(60, int(r * math.pi * 1.2))
-            for i in range(steps):
-                a = -2.8 + i / (steps - 1) * 2.5 + math.sin(tf + band * 0.6) * 0.07
-                x = int(cx + math.cos(a) * r)
-                y = int(cy + math.sin(a) * r * 0.44)
-                if i % 2 == 0:
-                    self.put(buf, x, y, '─', fg if band < 3 else dark, w, h)
+        self._draw_blob(buf, w, h, tf, energy, primary, secondary, accent)
 
-        # Determine phase: 0=MOCT, 1=HAYFILM, 2=date
-        phase = (frame // 180) % 3
+        meta_y = max(1, h // 9)
+        meta = f'{kicker}   {when}'
+        self._write(buf, w, h, 3, meta_y, meta, fg)
+        self._hline(buf, w, h, 2, min(w - 2, 2 + len(meta) + 6), meta_y + 1, '─', dark)
 
-        # Scale block text to fit width
-        if phase == 0:
-            line1, line2 = 'MOCT', ''
-            sc1 = max(1, min(3, (w - 4) // (4 * 6 + 3)))
-            sc2 = sc1
-        elif phase == 1:
-            line1, line2 = 'HAYFILM', 'CLUSTER'
-            sc1 = max(1, min(2, (w - 4) // (7 * 6 + 6)))
-            sc2 = sc1
-        else:
-            line1, line2 = 'STUDIO', 'BAR'
-            sc1 = max(1, min(2, (w - 4) // (6 * 6 + 5)))
-            sc2 = max(1, min(3, (w - 4) // (3 * 6 + 2)))
+        title_y = max(meta_y + 3, h // 5)
+        title_x = max(2, (w - len(title)) // 2)
+        self._write(buf, w, h, title_x + 1, title_y + 1, title, dark)
+        self._write(buf, w, h, title_x, title_y, title, fg)
+        self._hline(buf, w, h, title_x, min(w, title_x + len(title) - 6), title_y + 2, '─', primary)
 
-        y0 = max(1, h // 9)
-        self._block(buf, w, h, line1, y0, fg, scale=sc1)
-        y1 = y0 + 5 * sc1 + 2
-        self._block(buf, w, h, line2, y1, hot, scale=sc2)
+        left_x = 3
+        self._write(buf, w, h, left_x, title_y + 4, where, fg)
+        self._hline(buf, w, h, left_x, min(w - 2, left_x + max(10, len(where) + 4)), title_y + 5, '─', dark)
 
-        # Corner metadata
-        meta = [
-            ('HAYFILM CLUSTER', max(2, w - 17), 1),
-            ('HAYFILM STUDIO', 2, max(1, h - 3)),
-            ('YEREVAN', max(2, w - 9), max(1, h - 3)),
-        ]
-        for text, x, y in meta:
-            self._write(buf, w, h, x, y, text, fg if random.random() > 0.12 else hot)
+        lineup_y = title_y + 6
+        split = max(1, (len(lineup) + 1) // 2)
+        columns = [lineup[:split], lineup[split:]]
+        for ci, items in enumerate(columns):
+            col_x = left_x + ci * max(18, w // 4)
+            for li, name in enumerate(items):
+                self._write(buf, w, h, col_x, lineup_y + li * 2, name.upper(), fg if (li + ci) % 3 else accent)
 
-        # Stage labels
-        labels = ['STUDIO', 'BAR', 'PROJECTOR ROOM', 'BAK']
-        active = frame // 60 % len(labels)
-        for i, label in enumerate(labels):
-            x = 4 + (i * max(8, w // 4)) % max(8, w - 20)
-            y = max(2, h // 2 + (i % 2) * 4 - 2)
-            self._write(buf, w, h, x, y, label, hot if i == active else fg)
+        for i in range(4):
+            cx = int(w * 0.90)
+            cy = int(h * (0.34 + i * 0.18))
+            self.put(buf, cx, cy, '+', fg, w, h)
+            self.put(buf, cx - 1, cy, '─', secondary, w, h)
+            self.put(buf, cx + 1, cy, '─', secondary, w, h)
+            self.put(buf, cx, cy - 1, '│', secondary, w, h)
+            self.put(buf, cx, cy + 1, '│', secondary, w, h)
 
-        # Cross marks (energy-reactive count)
-        for _ in range(8 + int(energy * 18)):
-            x = random.randint(1, max(1, w - 2))
+        footer_y = max(1, h - 3)
+        self._write(buf, w, h, 3, footer_y, footer, fg)
+        self._write(buf, w, h, max(3, w - len(when) - 4), footer_y, when, secondary)
+
+        for _ in range(10 + int(energy * 10)):
+            x = random.randint(0, max(0, w - 8))
             y = random.randint(1, max(1, h - 2))
-            self.put(buf, x, y, '+', fg if random.random() > 0.3 else hot, w, h)
-
-        # Bottom scrolling strip
-        strip = '  /  '.join(self.WORDS)
-        repeated = (strip + '   ') * ((w // max(1, len(strip))) + 3)
-        off = (frame // 2) % max(1, len(strip))
-        self._write(buf, w, h, 0, h - 1, repeated[off:off + w], hot if peak > 0.35 else fg)
+            span = random.randint(3, max(3, w // 8))
+            self._hline(buf, w, h, x, x + span, y, '─', dark if random.random() < 0.7 else primary)

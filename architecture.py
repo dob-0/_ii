@@ -57,6 +57,12 @@ DEFAULTS = {
     'map_selected': -1,
     'map_cursor_x': None,
     'map_cursor_y': None,
+    'event_title': 'SYNAPSE',
+    'event_kicker': 'HAYFILM ->',
+    'event_when': 'MAY 15',
+    'event_where': 'STUDIO',
+    'event_lineup': 'UVALL [GE]|HONNELOOK|SCRIPT [GE]|FUKUMACHI [GE]|MTVARE [GE]|MARS|ICECHAIN|MA|LYUPEN|ISO',
+    'event_footer': 'SCIENCE AND SPIRIT',
 }
 
 
