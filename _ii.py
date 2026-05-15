@@ -97,6 +97,20 @@ MAIN_CONTROLS = [
 ]
 MAIN_KEYS = {key for key, _label, _mn, _mx, _kind in MAIN_CONTROLS}
 PARAM_META = {key: (label, mn, mx, kind) for key, label, mn, mx, kind in PARAM_META_ROWS}
+EXTERNAL_OVERRIDE_KEYS = {
+    'mode', 'mode_b', 'layer_b_enabled', 'mode_lock', 'palette',
+    'primary_color', 'secondary_color', 'accent_color',
+    'bpm', 'bpm_sync', 'auto_cycle', 'mode_cycle_frames',
+    'frame_delay', 'wave_amplitude', 'glitch_intensity',
+    'rain_density', 'strobe_speed', 'master_dim',
+    'blackout', 'flash_active', 'flash_text',
+    'sym_set', 'layer_b_alpha', 'mapping',
+    'map_mode', 'map_selected', 'map_cursor_x', 'map_cursor_y',
+    'event_title', 'event_kicker', 'event_when', 'event_where',
+    'event_stage_a', 'event_stage_b',
+    'event_lineup', 'event_lineup_a', 'event_lineup_b',
+    'event_footer',
+}
 
 PRESETS = {
     # Show presets — F1→F10: warm-up → build → peak → close
@@ -209,7 +223,8 @@ class NodeEngine:
         self._mode_lock_forced_auto_cycle = False
         self._nmtime   = 0.0
         self._mappings = _load_mappings()
-        self._map_idx  = int(load_json(CTRL_PATH, {}).get('mapping', 0))
+        self._last_written_state = load_json(CTRL_PATH, {})
+        self._map_idx  = int(self._last_written_state.get('mapping', 0))
         self.cues      = CueList()
         self.midi      = None
         self.midi_values = {}
@@ -264,6 +279,31 @@ class NodeEngine:
         except Exception as e:
             self.graph_err = str(e)[:80]
 
+    def _apply_external_changes(self, external_state):
+        previous = self._last_written_state if isinstance(self._last_written_state, dict) else {}
+        changed = {
+            key: value for key, value in external_state.items()
+            if key in EXTERNAL_OVERRIDE_KEYS and previous.get(key) != value
+        }
+        if not changed:
+            return
+
+        if 'auto_cycle' in changed and bool(changed['auto_cycle']):
+            self.overrides.pop('mode', None)
+            self.overrides.pop('mode_lock', None)
+            self._mode_lock_forced_auto_cycle = False
+
+        if 'mode_lock' in changed and not bool(changed['mode_lock']):
+            self.overrides.pop('mode', None)
+            self.overrides.pop('mode_lock', None)
+            self._mode_lock_forced_auto_cycle = False
+
+        for key, value in changed.items():
+            if key == 'mode':
+                self._set_manual_mode(value)
+                continue
+            self.overrides[key] = value
+
     def run(self):
         curses.curs_set(0)
         self.scr.nodelay(True)
@@ -303,6 +343,7 @@ class NodeEngine:
 
             # Merge: DEFAULTS < portal/control file < node_state < MIDI < manual overrides
             external_state = load_json(CTRL_PATH, {})
+            self._apply_external_changes(external_state)
             merged = dict(DEFAULTS)
             merged.update(external_state)
             merged.update(node_state)
@@ -317,6 +358,7 @@ class NodeEngine:
             self.state = merged
 
             write_ctrl(self.state)
+            self._last_written_state = dict(self.state)
             self._draw(t, node_state)
             self.frame += 1
 
