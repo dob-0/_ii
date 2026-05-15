@@ -1,4 +1,4 @@
-const titleNeedle = readConfig('title', 'MOCT7-VISUALS');
+const titleNeedle = readConfig('title', 'ii-VISUALS');
 const outputName = readConfig('output', 'HDMI-A-1');
 const useFullscreen = readConfig('fullscreen', 'true') === 'true';
 

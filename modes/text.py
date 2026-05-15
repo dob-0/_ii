@@ -10,7 +10,7 @@ class Text(Mode):
 
     def render(self, buf, w, h, t, frame, cfg, pal, syms):
         p = pal
-        text = cfg.get('flash_text', 'MOCT') or 'MOCT'
+        text = cfg.get('flash_text', 'SIGNAL') or 'SIGNAL'
 
         for _ in range(w * h // 25):
             self.put(buf, random.randint(0, w - 1), random.randint(0, h - 1), random.choice(syms), C['dim'], w, h)

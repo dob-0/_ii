@@ -1,4 +1,4 @@
-"""MOCT7 | Projection mapping engine — zone/surface routing."""
+"""Projection mapping engine — zone/surface routing."""
 
 import json
 import os

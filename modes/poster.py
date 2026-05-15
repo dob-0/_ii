@@ -10,8 +10,7 @@ class Poster(Mode):
     ORDER = 18
 
     DEFAULT_LINEUP = [
-        'UVALL [GE]', 'HONNELOOK', 'SCRIPT [GE]', 'FUKUMACHI [GE]', 'MTVARE [GE]',
-        'MARS', 'ICECHAIN', 'MA', 'LYUPEN', 'ISO',
+        'ARTIST A', 'ARTIST B', 'ARTIST C', 'ARTIST D',
     ]
 
     def _write(self, buf, w, h, x, y, text, col):
@@ -40,7 +39,7 @@ class Poster(Mode):
         return items or list(self.DEFAULT_LINEUP)
 
     def _title_text(self, cfg):
-        title = self._meta(cfg, 'event_title', '') or self._meta(cfg, 'flash_text', 'SYNAPSE')
+        title = self._meta(cfg, 'event_title', '') or self._meta(cfg, 'flash_text', 'SIGNAL')
         title = title.upper()
         if ' ' not in title and len(title) <= 10:
             return ' '.join(title)
@@ -97,10 +96,10 @@ class Poster(Mode):
         accent = C[pal['a']]
         dark = C['dim']
         title = self._title_text(cfg)
-        kicker = self._meta(cfg, 'event_kicker', 'HAYFILM ->').upper()
-        when = self._meta(cfg, 'event_when', 'MAY 15').upper()
-        where = self._meta(cfg, 'event_where', 'STUDIO').upper()
-        footer = self._meta(cfg, 'event_footer', 'SCIENCE AND SPIRIT').upper()
+        kicker = self._meta(cfg, 'event_kicker', 'LIVE SESSION').upper()
+        when = self._meta(cfg, 'event_when', 'TONIGHT').upper()
+        where = self._meta(cfg, 'event_where', 'MAIN ROOM').upper()
+        footer = self._meta(cfg, 'event_footer', 'DOORS OPEN 23:00').upper()
         lineup = self._lineup(cfg)
 
         for y in range(h):

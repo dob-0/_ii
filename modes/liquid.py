@@ -46,24 +46,6 @@ class Liquid(Mode):
                 else:
                     buf[y][x] = (random.choice([' ', ' ', '.', '·']), C['dim']) if random.random() < 0.14 else None
 
-        title = 'MOCT'
-        tx = max(1, (w - len(title) * 6) // 2)
-        ty = max(1, h // 7)
-        block = {
-            'M': ['█   █', '██ ██', '█ █ █', '█   █', '█   █'],
-            'O': ['████ ', '█  █ ', '█  █ ', '█  █ ', '████ '],
-            'C': ['████ ', '█    ', '█    ', '█    ', '████ '],
-            'T': ['█████', '  █  ', '  █  ', '  █  ', '  █  '],
-        }
-        xoff = tx
-        for ch in title:
-            glyph = block[ch]
-            for gy, row in enumerate(glyph):
-                for gx, cell in enumerate(row):
-                    if cell != ' ':
-                        self.put(buf, xoff + gx, ty + gy, '█', C['white'], w, h)
-            xoff += 6
-
         arc_r = min(w, h * 2) * (0.28 + energy * 0.08)
         ox = w * 0.60
         oy = h * 0.54

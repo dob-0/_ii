@@ -99,7 +99,7 @@ MAIN_KEYS = {key for key, _label, _mn, _mx, _kind in MAIN_CONTROLS}
 PARAM_META = {key: (label, mn, mx, kind) for key, label, mn, mx, kind in PARAM_META_ROWS}
 
 PRESETS = {
-    # MOCT night — F1→F10: warm-up → build → peak → close
+    # Show presets — F1→F10: warm-up → build → peak → close
     curses.KEY_F1:  {'mode': 7,  'palette': 2, 'frame_delay': 0.06, 'bpm': 130, 'bpm_sync': True,  'layer_b_enabled': False},                       # TUNNEL  VOID    warm-up
     curses.KEY_F2:  {'mode': 0,  'palette': 6, 'rain_density': 0.9, 'frame_delay': 0.05, 'bpm': 132, 'bpm_sync': True, 'layer_b_enabled': False},   # RAIN    BLOOD   build
     curses.KEY_F3:  {'mode': 2,  'palette': 0, 'glitch_intensity': 0.7, 'bpm': 135, 'bpm_sync': True, 'layer_b_enabled': False},                    # GLITCH  STEEL   mid
@@ -582,7 +582,7 @@ class NodeEngine:
     def _edit_flash_text(self):
         h, w = self.scr.getmaxyx()
         prompt = ' FLASH TEXT > '
-        current = str(self.state.get('flash_text', 'MOCT'))
+        current = str(self.state.get('flash_text', 'SIGNAL'))
         curses.echo()
         curses.curs_set(1)
         self.scr.nodelay(False)

@@ -533,7 +533,7 @@ canvas{cursor:crosshair}
     <div class="ctrl-section">
       <h3>FLASH TEXT</h3>
       <div class="flash-row">
-        <input type="text" id="flash-input" placeholder="MOCT" value="MOCT"
+        <input type="text" id="flash-input" placeholder="SIGNAL" value="SIGNAL"
                onkeydown="if(event.key==='Enter')triggerFlash()">
         <button class="cbtn" onclick="triggerFlash()">TRIGGER</button>
       </div>
@@ -544,32 +544,32 @@ canvas{cursor:crosshair}
       <div class="ctrl-stack">
         <div>
           <label>TITLE</label>
-          <input type="text" id="event-title" placeholder="SYNAPSE"
+          <input type="text" id="event-title" placeholder="SIGNAL"
                  oninput="ctrlSet('event_title',this.value)">
         </div>
         <div>
           <label>KICKER</label>
-          <input type="text" id="event-kicker" placeholder="HAYFILM ->"
+          <input type="text" id="event-kicker" placeholder="LIVE SESSION"
                  oninput="ctrlSet('event_kicker',this.value)">
         </div>
         <div>
           <label>WHEN</label>
-          <input type="text" id="event-when" placeholder="MAY 15"
+          <input type="text" id="event-when" placeholder="TONIGHT"
                  oninput="ctrlSet('event_when',this.value)">
         </div>
         <div>
           <label>WHERE</label>
-          <input type="text" id="event-where" placeholder="STUDIO"
+          <input type="text" id="event-where" placeholder="MAIN ROOM"
                  oninput="ctrlSet('event_where',this.value)">
         </div>
         <div style="grid-column:1/-1">
           <label>LINEUP (use | between names)</label>
-          <input type="text" id="event-lineup" placeholder="UVALL [GE]|HONNELOOK|SCRIPT [GE]|FUKUMACHI [GE]"
+          <input type="text" id="event-lineup" placeholder="ARTIST A|ARTIST B|ARTIST C|ARTIST D"
                  oninput="ctrlSet('event_lineup',this.value)">
         </div>
         <div style="grid-column:1/-1">
           <label>FOOTER</label>
-          <input type="text" id="event-footer" placeholder="SCIENCE AND SPIRIT"
+          <input type="text" id="event-footer" placeholder="DOORS OPEN 23:00"
                  oninput="ctrlSet('event_footer',this.value)">
         </div>
       </div>
@@ -1037,7 +1037,7 @@ function applyCtrlToUI(c){
   const bb=document.getElementById('blackout-btn');
   if(bb)bb.classList.toggle('on',!!(c.blackout));
 
-  syncTextInput('flash-input',c.flash_text??'MOCT');
+  syncTextInput('flash-input',c.flash_text??'SIGNAL');
   syncTextInput('event-title',c.event_title??'');
   syncTextInput('event-kicker',c.event_kicker??'');
   syncTextInput('event-when',c.event_when??'');
@@ -1090,7 +1090,7 @@ function tapTempo(){
 }
 
 function triggerFlash(){
-  const txt=document.getElementById('flash-input').value||'MOCT';
+  const txt=document.getElementById('flash-input').value||'SIGNAL';
   ctrlSet('flash_text',txt);
   ctrlSet('flash_active',true);
   clearTimeout(flashTimer);

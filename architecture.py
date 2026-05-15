@@ -33,7 +33,7 @@ DEFAULTS = {
     'primary_color': -1,
     'secondary_color': -1,
     'accent_color': -1,
-    'flash_text': 'MOCT',
+    'flash_text': 'SIGNAL',
     'frame_delay': 0.05,
     'strobe_speed': 2,
     'glitch_intensity': 0.4,
@@ -57,12 +57,12 @@ DEFAULTS = {
     'map_selected': -1,
     'map_cursor_x': None,
     'map_cursor_y': None,
-    'event_title': 'SYNAPSE',
-    'event_kicker': 'HAYFILM ->',
-    'event_when': 'MAY 15',
-    'event_where': 'STUDIO',
-    'event_lineup': 'UVALL [GE]|HONNELOOK|SCRIPT [GE]|FUKUMACHI [GE]|MTVARE [GE]|MARS|ICECHAIN|MA|LYUPEN|ISO',
-    'event_footer': 'SCIENCE AND SPIRIT',
+    'event_title': 'SIGNAL',
+    'event_kicker': 'LIVE SESSION',
+    'event_when': 'TONIGHT',
+    'event_where': 'MAIN ROOM',
+    'event_lineup': 'ARTIST A|ARTIST B|ARTIST C|ARTIST D',
+    'event_footer': 'DOORS OPEN 23:00',
 }
 
 
