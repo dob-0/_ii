@@ -9,8 +9,11 @@ class Poster(Mode):
     NAME = 'POSTER'
     ORDER = 18
 
-    DEFAULT_LINEUP = [
-        'ARTIST A', 'ARTIST B', 'ARTIST C', 'ARTIST D',
+    DEFAULT_LINEUP_A = [
+        'UVALL [GE]', 'HONNELOOK', 'SCRIPT [GE]', 'FUKUMACHI [GE]', 'MTVARE [GE]',
+    ]
+    DEFAULT_LINEUP_B = [
+        'MARS', 'ICECHAIN', 'MA', 'LYUPEN', 'ISO',
     ]
 
     def _write(self, buf, w, h, x, y, text, col):
@@ -33,17 +36,29 @@ class Poster(Mode):
         text = str(value).strip()
         return text or fallback
 
-    def _lineup(self, cfg):
-        raw = self._meta(cfg, 'event_lineup', '|'.join(self.DEFAULT_LINEUP))
+    def _lineup(self, cfg, key, fallback):
+        raw = self._meta(cfg, key, '|'.join(fallback))
         items = [part.strip() for part in re.split(r'[|\n]+', raw) if part.strip()]
-        return items or list(self.DEFAULT_LINEUP)
+        return items or list(fallback)
 
     def _title_text(self, cfg):
-        title = self._meta(cfg, 'event_title', '') or self._meta(cfg, 'flash_text', 'SIGNAL')
+        title = self._meta(cfg, 'event_title', '') or self._meta(cfg, 'flash_text', 'SYNAPSE')
         title = title.upper()
         if ' ' not in title and len(title) <= 10:
             return ' '.join(title)
         return re.sub(r'\s+', ' ', title)
+
+    def _stage_blocks(self, cfg):
+        stage_a = self._meta(cfg, 'event_stage_a', self._meta(cfg, 'event_where', 'STUDIO')).upper()
+        stage_b = self._meta(cfg, 'event_stage_b', 'BAR').upper()
+        lineup_a = self._lineup(cfg, 'event_lineup_a', self.DEFAULT_LINEUP_A)
+        lineup_b = self._lineup(cfg, 'event_lineup_b', self.DEFAULT_LINEUP_B)
+        if not cfg.get('event_lineup_a') and not cfg.get('event_lineup_b'):
+            combined = self._lineup(cfg, 'event_lineup', self.DEFAULT_LINEUP_A + self.DEFAULT_LINEUP_B)
+            split = min(len(self.DEFAULT_LINEUP_A), len(combined))
+            lineup_a = combined[:split]
+            lineup_b = combined[split:] or list(self.DEFAULT_LINEUP_B)
+        return (stage_a, lineup_a), (stage_b, lineup_b)
 
     def _draw_blob(self, buf, w, h, tf, energy, primary, secondary, accent):
         x0 = max(0, int(w * 0.44))
@@ -96,11 +111,10 @@ class Poster(Mode):
         accent = C[pal['a']]
         dark = C['dim']
         title = self._title_text(cfg)
-        kicker = self._meta(cfg, 'event_kicker', 'LIVE SESSION').upper()
-        when = self._meta(cfg, 'event_when', 'TONIGHT').upper()
-        where = self._meta(cfg, 'event_where', 'MAIN ROOM').upper()
-        footer = self._meta(cfg, 'event_footer', 'DOORS OPEN 23:00').upper()
-        lineup = self._lineup(cfg)
+        kicker = self._meta(cfg, 'event_kicker', 'EPOCA ->').upper()
+        when = self._meta(cfg, 'event_when', 'MAY 15').upper()
+        footer = self._meta(cfg, 'event_footer', 'SCIENCE AND SPIRIT').upper()
+        (stage_a, lineup_a), (stage_b, lineup_b) = self._stage_blocks(cfg)
 
         for y in range(h):
             for x in range(w):
@@ -121,7 +135,7 @@ class Poster(Mode):
         self._draw_blob(buf, w, h, tf, energy, primary, secondary, accent)
 
         meta_y = max(1, h // 9)
-        meta = f'{kicker}   {when}'
+        meta = f'{kicker} {when}'
         self._write(buf, w, h, 3, meta_y, meta, fg)
         self._hline(buf, w, h, 2, min(w - 2, 2 + len(meta) + 6), meta_y + 1, '─', dark)
 
@@ -132,16 +146,15 @@ class Poster(Mode):
         self._hline(buf, w, h, title_x, min(w, title_x + len(title) - 6), title_y + 2, '─', primary)
 
         left_x = 3
-        self._write(buf, w, h, left_x, title_y + 4, where, fg)
-        self._hline(buf, w, h, left_x, min(w - 2, left_x + max(10, len(where) + 4)), title_y + 5, '─', dark)
-
-        lineup_y = title_y + 6
-        split = max(1, (len(lineup) + 1) // 2)
-        columns = [lineup[:split], lineup[split:]]
-        for ci, items in enumerate(columns):
-            col_x = left_x + ci * max(18, w // 4)
-            for li, name in enumerate(items):
-                self._write(buf, w, h, col_x, lineup_y + li * 2, name.upper(), fg if (li + ci) % 3 else accent)
+        lineup_y = title_y + 4
+        sections = [
+            (stage_a, lineup_a, lineup_y),
+            (stage_b, lineup_b, lineup_y + 2 + len(lineup_a) * 2),
+        ]
+        for si, (stage_name, artists, sy) in enumerate(sections):
+            self._write(buf, w, h, left_x, sy, stage_name, fg)
+            for li, name in enumerate(artists):
+                self._write(buf, w, h, left_x, sy + 2 + li * 2, name.upper(), fg if (li + si) % 3 else accent)
 
         for i in range(4):
             cx = int(w * 0.90)
