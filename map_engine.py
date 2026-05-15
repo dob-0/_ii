@@ -49,6 +49,38 @@ def _surface_points(surface, w, render_h):
     return pts
 
 
+def _is_non_space(cell):
+    return cell is not None and cell[0] != ' '
+
+
+def _composite_sub(out, buf_a, buf_b, alpha, sw, sh):
+    for sy in range(sh):
+        row_out = out[sy]
+        row_a = buf_a[sy]
+        row_b = buf_b[sy]
+        for sx in range(sw):
+            b = row_b[sx]
+            if _is_non_space(b) and (alpha >= 0.999 or random.random() < alpha):
+                row_out[sx] = b
+            else:
+                row_out[sx] = row_a[sx]
+
+
+def _render_mode_stack(sw, sh, modes, mode_idx, mode_b_idx, merged, pal, syms, t_now, frame):
+    out = [[None] * sw for _ in range(sh)]
+    modes[mode_idx].render(out, sw, sh, t_now, frame, merged, pal, syms)
+    if not bool(merged.get('layer_b_enabled', False)):
+        return out
+
+    alpha = float(merged.get('layer_b_alpha', 1.0) or 0.0)
+    buf_a = out
+    buf_b = [[None] * sw for _ in range(sh)]
+    out = [[None] * sw for _ in range(sh)]
+    modes[mode_b_idx].render(buf_b, sw, sh, t_now, frame, merged, pal, syms)
+    _composite_sub(out, buf_a, buf_b, alpha, sw, sh)
+    return out
+
+
 def _render_surfaces(buf, w, render_h, modes, active_mode, mapping, merged, pal, syms, t, frame):
     surfaces = [s for s in mapping.get('surfaces', []) if s.get('enabled', True)]
     if not surfaces:
@@ -78,14 +110,14 @@ def _render_surfaces(buf, w, render_h, modes, active_mode, mapping, merged, pal,
 
         mode_spec = surface.get('mode')
         mode_idx = active_mode if mode_spec is None else max(0, min(len(modes) - 1, int(mode_spec)))
+        mode_b_idx = max(0, min(len(modes) - 1, int(merged.get('mode_b', mode_idx) or mode_idx)))
 
         surface_cfg = dict(merged)
         surface_cfg['_map_zone_id'] = surface.get('id', '')
 
         t_surface = t + float(surface.get('phase', 0.0) or 0.0)
 
-        sub = [[None] * sw for _ in range(sh)]
-        modes[mode_idx].render(sub, sw, sh, t_surface, frame, surface_cfg, pal, syms)
+        sub = _render_mode_stack(sw, sh, modes, mode_idx, mode_b_idx, surface_cfg, pal, syms, t_surface, frame)
 
         for sy in range(sh):
             dy = min_y + sy
@@ -136,14 +168,14 @@ def render_zones(buf, w, render_h, modes, active_mode, mapping, merged, pal, sym
 
         mode_spec = zone.get('mode')
         mode_idx = active_mode if mode_spec is None else max(0, min(len(modes) - 1, int(mode_spec)))
+        mode_b_idx = max(0, min(len(modes) - 1, int(merged.get('mode_b', mode_idx) or mode_idx)))
 
         zone_cfg = dict(merged)
         zone_cfg['_map_zone_id'] = zone.get('id', '')
 
         t_zone = t + float(zone.get('phase', 0.0))
 
-        sub = [[None] * zw for _ in range(zh)]
-        modes[mode_idx].render(sub, zw, zh, t_zone, frame, zone_cfg, pal, syms)
+        sub = _render_mode_stack(zw, zh, modes, mode_idx, mode_b_idx, zone_cfg, pal, syms, t_zone, frame)
 
         for sy in range(zh):
             dy = zy + sy
