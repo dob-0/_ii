@@ -24,6 +24,7 @@ sys.path.insert(0, BASE)
 import pygame
 
 from architecture import CTRL_PATH, DEFAULTS, STATUS_PATH, discover_modes, load_json, save_json_atomic
+from fx import FXRack
 from modes.base import PALETTES, color_key
 
 try:
@@ -200,6 +201,7 @@ class OutputEngine:
         self.surfaces   = []
         self.luts       = []
         self._video_players = {}   # surf_id → VideoPlayer
+        self._fx = FXRack()
 
         pygame.init()
         self._init_display()
@@ -264,7 +266,7 @@ class OutputEngine:
                 else:
                     ro[x] = ra[x]
 
-    def _fill_vbuf(self, mode_idx, mode_b_idx, layer_b, alpha, t_surf, merged, pal, syms):
+    def _fill_vbuf(self, surf_id, mode_idx, mode_b_idx, layer_b, alpha, t_surf, merged, pal, syms):
         if layer_b:
             self._clear(self._buf_a)
             self._clear(self._buf_b)
@@ -277,6 +279,7 @@ class OutputEngine:
             self._clear(self._buf)
             self.modes[mode_idx].render(
                 self._buf, self.vw, self.vh, t_surf, self.frame, merged, pal, syms)
+        self._fx.apply(surf_id, self._buf, self.vw, self.vh, merged, self.frame)
 
     def _blit_numpy(self, lut_data, master_dim):
         lut_vy, lut_vx, valid = lut_data
@@ -349,11 +352,12 @@ class OutputEngine:
                 if player is not None:
                     vf = player.read_frame(self.vw, self.vh)
                     if vf is not None:
+                        self._fx.reset(surf['id'])
                         self._blit_video(lut_data, vf, master_dim)
                         continue
                 spec = surf['mode']
                 midx = max(0, min(len(self.modes)-1, int(spec))) if spec is not None else mode_idx
-                self._fill_vbuf(midx, mode_b_idx, layer_b, alpha,
+                self._fill_vbuf(surf['id'], midx, mode_b_idx, layer_b, alpha,
                                  t_now + surf['phase'], merged, pal, syms)
                 self._blit_numpy(lut_data, master_dim)
             self.screen.blit(self._np_surf, (0, 0))
@@ -362,7 +366,7 @@ class OutputEngine:
             for surf, quads in zip(self.surfaces, self.luts):
                 spec = surf['mode']
                 midx = max(0, min(len(self.modes)-1, int(spec))) if spec is not None else mode_idx
-                self._fill_vbuf(midx, mode_b_idx, layer_b, alpha,
+                self._fill_vbuf(surf['id'], midx, mode_b_idx, layer_b, alpha,
                                  t_now + surf['phase'], merged, pal, syms)
                 self._blit_poly(quads, master_dim)
 
@@ -421,6 +425,7 @@ class OutputEngine:
                 self._load_map()
 
             if self._kb_blackout or ctrl.get('blackout'):
+                self._fx.reset()
                 self.screen.fill((0, 0, 0))
                 pygame.display.flip()
                 self.frame += 1

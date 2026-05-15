@@ -10,6 +10,7 @@ import sys
 import time
 
 from architecture import CONFIG_PATH, CTRL_PATH, STATUS_PATH, DEFAULTS, discover_modes, load_json, save_json_atomic
+from fx import FXRack, active_fx_labels
 from map_engine import load_mappings, render_zones
 from modes.base import C, ESC, HIDE, Mode, PALETTES, RESET, SHOW, bresenham, color_key, mv
 
@@ -72,9 +73,11 @@ class Engine:
 
         self._mappings = load_mappings()
         self._map_reload_frame = 0
+        self._fx = FXRack()
 
     def _collect_watch_paths(self):
         paths = [os.path.abspath(__file__)]
+        paths.append(os.path.join(BASE, 'fx.py'))
         for module_info in pkgutil.iter_modules([MODES_DIR]):
             if module_info.name.startswith('__'):
                 continue
@@ -146,9 +149,11 @@ class Engine:
             mname = m.get('name', '')
             if idx > 0 or mname not in ('DEFAULT', 'default', ''):
                 map_part = f' | MAP:{mname}'
+        fx_labels = active_fx_labels(self.ctrl)
+        fx_part = f' | FX:{"+".join(fx_labels)}' if fx_labels else ''
         txt = (
              f'_ii{layer} | {label} | {self.pal["name"]} | '
-            f'{bpm}BPM{sync}{map_part} | {self._fps:.0f}fps | {time.time() - self.t0:06.1f}s '
+            f'{bpm}BPM{sync}{map_part}{fx_part} | {self._fps:.0f}fps | {time.time() - self.t0:06.1f}s '
         )
         return C['dim'] + txt[: self.w].ljust(self.w) + RESET
 
@@ -422,6 +427,7 @@ class Engine:
                     })
 
                 if c.get('blackout'):
+                    self._fx.reset()
                     out = []
                     for y in range(self.render_h):
                         out.append(mv(0, y) + ' ' * self.w)
@@ -493,6 +499,10 @@ class Engine:
                 flash_text = c.get('flash_text', '')
                 if c.get('flash_active') and flash_text and not mapped_output:
                     self._flash(flash_text)
+
+                if not c.get('map_mode'):
+                    fx_key = 'mapped' if mapped_output else 'main'
+                    self._fx.apply(fx_key, self.buf, self.w, self.render_h, merged, self.frame)
 
                 self._draw_map_cursor()
 

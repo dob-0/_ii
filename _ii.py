@@ -4,6 +4,7 @@
 import curses, json, locale, math, os, subprocess, sys, time, importlib.util
 
 from architecture import CONFIG_PATH, CTRL_PATH, DEFAULTS, NODES_PATH, STATUS_PATH, WINDOW_PATH, discover_mode_names, load_json, save_json_atomic
+from fx import active_fx_labels
 from map_engine import load_mappings as _load_mappings
 from cues import CueList
 
@@ -62,6 +63,11 @@ PARAM_META_ROWS = [
     ('strobe_speed',     'STROBE      ', 1,    10,  'int'),
     ('bpm_sync',         'BPM SYNC    ', 0,    1,   'bool'),
     ('master_dim',       'MASTER DIM  ', 0.0,  1.0, 'f2'),
+    ('fx_mix',           'FX MIX      ', 0.0,  1.0, 'f2'),
+    ('fx_shutter',       'FX SHUTTER  ', 0.0,  1.0, 'f2'),
+    ('fx_slice',         'FX SLICE    ', 0.0,  1.0, 'f2'),
+    ('fx_kaleido',       'FX KALEIDO  ', 0.0,  1.0, 'f2'),
+    ('fx_echo',          'FX ECHO     ', 0.0,  1.0, 'f2'),
     ('blackout',         'BLACKOUT    ', 0,    1,   'bool'),
     ('flash_active',     'FLASH       ', 0,    1,   'bool'),
     ('sym_set',          'SYMBOLS     ', 0,    5,   'sym_set'),
@@ -90,6 +96,11 @@ MAIN_CONTROLS = [
     ('mode_cycle_frames','CYCLE FRMS  ', 50,   600, 'int'),
     ('frame_delay',      'SPEED       ', 0.01, 0.20,'f3'),
     ('master_dim',       'MASTER DIM  ', 0.0,  1.0, 'f2'),
+    ('fx_mix',           'FX MIX      ', 0.0,  1.0, 'f2'),
+    ('fx_shutter',       'FX SHUTTER  ', 0.0,  1.0, 'f2'),
+    ('fx_slice',         'FX SLICE    ', 0.0,  1.0, 'f2'),
+    ('fx_kaleido',       'FX KALEIDO  ', 0.0,  1.0, 'f2'),
+    ('fx_echo',          'FX ECHO     ', 0.0,  1.0, 'f2'),
     ('blackout',         'BLACKOUT    ', 0,    1,   'bool'),
     ('flash_active',     'FLASH       ', 0,    1,   'bool'),
     ('sym_set',          'SYMBOLS     ', 0,    5,   'sym_set'),
@@ -103,6 +114,7 @@ EXTERNAL_OVERRIDE_KEYS = {
     'bpm', 'bpm_sync', 'auto_cycle', 'mode_cycle_frames',
     'frame_delay', 'wave_amplitude', 'glitch_intensity',
     'rain_density', 'strobe_speed', 'master_dim',
+    'fx_mix', 'fx_shutter', 'fx_slice', 'fx_kaleido', 'fx_echo',
     'blackout', 'flash_active', 'flash_text',
     'sym_set', 'layer_b_alpha', 'mapping',
     'map_mode', 'map_selected', 'map_cursor_x', 'map_cursor_y',
@@ -754,6 +766,8 @@ class NodeEngine:
         if layer:                 flags.append(f'MIX {alpha:.0%}')
         if s.get('flash_active'): flags.append('FLASH')
         if s.get('blackout'):     flags.append('■ BLACKOUT')
+        fx_labels = active_fx_labels(s)
+        if fx_labels:             flags.append(f'FX:{"+".join(fx_labels)}')
         if n_ov:                  flags.append(f'OVR:{n_ov}')
         if self._mappings:
             midx = self._map_idx % len(self._mappings)

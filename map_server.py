@@ -160,6 +160,8 @@ canvas{cursor:crosshair}
 .slider-row label{width:52px;font-size:9px;letter-spacing:1px;color:var(--text3);flex-shrink:0}
 .slider-row input[type=range]{flex:1;height:3px;accent-color:var(--accent);cursor:pointer}
 .slider-row .sval{width:36px;font-size:10px;color:var(--text2);text-align:right;flex-shrink:0}
+.fx-preset-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.fx-preset-row .cbtn{width:100%;padding:6px 4px}
 
 /* palette */
 .pal-grid{display:flex;gap:6px;flex-wrap:wrap}
@@ -526,6 +528,47 @@ canvas{cursor:crosshair}
         <input type="range" id="sl-frame_delay" min="0.01" max="0.15" step="0.005" value="0.05"
                oninput="sliderChange('frame_delay',this.value,'sl-frame_delay-val')">
         <span class="sval" id="sl-frame_delay-val">0.050</span>
+      </div>
+    </div>
+
+    <!-- FX RACK -->
+    <div class="ctrl-section">
+      <h3>FX RACK</h3>
+      <div class="fx-preset-row">
+        <button class="cbtn" onclick="setFxPreset('clear')">CLEAR</button>
+        <button class="cbtn" onclick="setFxPreset('smear')">SMEAR</button>
+        <button class="cbtn" onclick="setFxPreset('kaleido')">KALEIDO</button>
+        <button class="cbtn" onclick="setFxPreset('pulse')">PULSE</button>
+      </div>
+      <div class="slider-row">
+        <label>MIX</label>
+        <input type="range" id="sl-fx_mix" min="0" max="1" step="0.01" value="0"
+               oninput="sliderChange('fx_mix',this.value,'sl-fx_mix-val')">
+        <span class="sval" id="sl-fx_mix-val">0.00</span>
+      </div>
+      <div class="slider-row">
+        <label>SHUT</label>
+        <input type="range" id="sl-fx_shutter" min="0" max="1" step="0.01" value="0"
+               oninput="sliderChange('fx_shutter',this.value,'sl-fx_shutter-val')">
+        <span class="sval" id="sl-fx_shutter-val">0.00</span>
+      </div>
+      <div class="slider-row">
+        <label>SLICE</label>
+        <input type="range" id="sl-fx_slice" min="0" max="1" step="0.01" value="0"
+               oninput="sliderChange('fx_slice',this.value,'sl-fx_slice-val')">
+        <span class="sval" id="sl-fx_slice-val">0.00</span>
+      </div>
+      <div class="slider-row">
+        <label>KALEI</label>
+        <input type="range" id="sl-fx_kaleido" min="0" max="1" step="0.01" value="0"
+               oninput="sliderChange('fx_kaleido',this.value,'sl-fx_kaleido-val')">
+        <span class="sval" id="sl-fx_kaleido-val">0.00</span>
+      </div>
+      <div class="slider-row">
+        <label>ECHO</label>
+        <input type="range" id="sl-fx_echo" min="0" max="1" step="0.01" value="0"
+               oninput="sliderChange('fx_echo',this.value,'sl-fx_echo-val')">
+        <span class="sval" id="sl-fx_echo-val">0.00</span>
       </div>
     </div>
 
@@ -985,14 +1028,18 @@ function buildPaletteGrid(){
 }
 
 // Send a partial update to control.json
-async function ctrlSet(key,value){
-  const patch={};patch[key]=value;
+async function ctrlPatch(patch){
   ctrlPending={...ctrlPending,...patch};
   applyCtrlToUI({...ctrlState,...patch});
   try{
     await fetch('/api/ctrl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
     Object.keys(patch).forEach(k=>delete ctrlPending[k]);
   }catch(e){console.warn('ctrlSet failed',e)}
+}
+
+async function ctrlSet(key,value){
+  const patch={};patch[key]=value;
+  return ctrlPatch(patch);
 }
 
 // Apply full ctrl state to UI (called after each poll)
@@ -1039,6 +1086,11 @@ function applyCtrlToUI(c){
     rain_density:    [0.1,1,  (v)=>v.toFixed(2)],
     wave_amplitude:  [0.1,0.5,(v)=>v.toFixed(2)],
     frame_delay:     [0.01,0.15,(v)=>v.toFixed(3)],
+    fx_mix:          [0,1,    (v)=>v.toFixed(2)],
+    fx_shutter:      [0,1,    (v)=>v.toFixed(2)],
+    fx_slice:        [0,1,    (v)=>v.toFixed(2)],
+    fx_kaleido:      [0,1,    (v)=>v.toFixed(2)],
+    fx_echo:         [0,1,    (v)=>v.toFixed(2)],
   };
   Object.entries(sliders).forEach(([key,[,, fmt]])=>{
     const el=document.getElementById(`sl-${key}`);
@@ -1117,6 +1169,17 @@ function triggerFlash(){
 
 function toggleBlackout(){
   ctrlSet('blackout',!(ctrlState.blackout));
+}
+
+function setFxPreset(name){
+  const presets={
+    clear:{fx_mix:0,fx_shutter:0,fx_slice:0,fx_kaleido:0,fx_echo:0},
+    smear:{fx_mix:0.72,fx_shutter:0.08,fx_slice:0.34,fx_kaleido:0.0,fx_echo:0.62},
+    kaleido:{fx_mix:0.82,fx_shutter:0.0,fx_slice:0.12,fx_kaleido:0.88,fx_echo:0.24},
+    pulse:{fx_mix:0.66,fx_shutter:0.48,fx_slice:0.18,fx_kaleido:0.22,fx_echo:0.18},
+  };
+  const patch=presets[name];
+  if(patch)ctrlPatch(patch);
 }
 
 // ── polling ───────────────────────────────────────────────────
