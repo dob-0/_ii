@@ -18,6 +18,7 @@ from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from architecture import MAPPINGS_DIR, CTRL_PATH, STATUS_PATH, discover_mode_names, save_json_atomic, load_json
+from networking import network_action, network_status
 
 PORT = 7777
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -49,10 +50,11 @@ body{background:var(--bg);color:var(--text);font-family:monospace;display:flex;f
 .tab-btn.active{color:var(--tab-active);border-color:var(--border3)}
 
 /* ── tab panes ── */
-#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-camera,#tab-outputs,#tab-help,#tab-term{flex:1;display:none;overflow:hidden}
+#tab-map,#tab-ctrl,#tab-zones,#tab-media,#tab-camera,#tab-outputs,#tab-network,#tab-help,#tab-term{flex:1;display:none;overflow:hidden}
 #tab-map.active{display:flex}
 #tab-ctrl.active{display:flex;overflow-y:auto}
 #tab-zones.active{display:flex;flex-direction:column;overflow:hidden}
+#tab-network.active{display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
 
 /* ════════════════════════════════════════
    ZONES TAB
@@ -277,6 +279,30 @@ canvas{cursor:crosshair}
 /* strip-status alias kept for restartXLayout compat */
 #out-strip-status{display:none}
 
+/* ── NETWORK TAB ─────────────────────────────────────────────────────────── */
+#network-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+#network-toolbar .cbtn{width:auto;padding:4px 12px;margin-top:0}
+#network-status-badge{margin-left:auto;font:10px/1 monospace;letter-spacing:1px;color:#555}
+#network-status-badge.ok{color:var(--accent3)}
+#network-status-badge.warn{color:var(--accent2)}
+#network-body{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-content:start}
+.network-card{background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.network-card h3{font-size:9px;letter-spacing:3px;color:var(--text4);margin-bottom:2px;border-bottom:1px solid var(--border);padding-bottom:5px}
+.network-meta{font-size:11px;color:var(--text2);line-height:1.5}
+.network-meta .muted{color:var(--text4)}
+.network-note{font-size:10px;line-height:1.5;color:var(--text3);white-space:pre-wrap}
+.network-actions{display:flex;gap:6px;flex-wrap:wrap}
+.network-actions .cbtn{width:auto;margin-top:0;padding:5px 10px}
+#network-setup{white-space:pre-wrap;background:#0a0a0a;border:1px solid var(--border2);padding:8px 10px;border-radius:2px;color:var(--text2);font-size:11px;line-height:1.45}
+#network-wifi-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.network-wifi-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;background:var(--bg2);border:1px solid #222;border-radius:2px;padding:7px 8px}
+.network-wifi-row.active{border-color:#1c4a1c;background:#0c150c}
+.network-wifi-main{min-width:0}
+.network-wifi-ssid{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.network-wifi-sub{font-size:9px;color:var(--text4);letter-spacing:1px}
+.network-pill{font-size:9px;color:var(--text2);border:1px solid #333;border-radius:999px;padding:3px 7px}
+.network-empty{font-size:11px;color:var(--text4);padding:14px 4px}
+
 /* ── HELP TAB ────────────────────────────────────────────────────────────── */
 #tab-help{flex-direction:column;overflow-y:auto;background:var(--bg);padding:16px}
 #tab-help.active{display:flex}
@@ -322,6 +348,7 @@ canvas{cursor:crosshair}
   <button class="tab-btn"        id="btn-camera" onclick="switchTab('camera')">[ CAMERA ]</button>
   <button class="tab-btn"        id="btn-media" onclick="switchTab('media')">[ MEDIA ]</button>
   <button class="tab-btn"        id="btn-outputs" onclick="switchTab('outputs')">[ OUTPUTS ]</button>
+  <button class="tab-btn"        id="btn-network" onclick="switchTab('network')">[ NETWORK ]</button>
   <button class="tab-btn"        id="btn-help" onclick="switchTab('help')">[ HELP ]</button>
   <button class="tab-btn"        id="btn-term" onclick="switchTab('term')">[ TERM ]</button>
 </div>
@@ -645,6 +672,53 @@ canvas{cursor:crosshair}
   </div>
 </div><!-- /tab-ctrl -->
 
+<!-- ════════════════════════════════════════
+     NETWORK TAB
+     ════════════════════════════════════════ -->
+<div id="tab-network">
+  <div id="network-toolbar">
+    <label>STATION MODE</label>
+    <button class="cbtn" onclick="networkLoad(false)">REFRESH</button>
+    <button class="cbtn" onclick="networkLoad(true)">SCAN WIFI</button>
+    <span id="network-status-badge">idle</span>
+  </div>
+  <div id="network-body">
+    <div class="network-card">
+      <h3>STATUS</h3>
+      <div class="network-meta" id="network-summary">loading…</div>
+      <div class="network-note" id="network-note"></div>
+    </div>
+    <div class="network-card">
+      <h3>JOIN WIFI</h3>
+      <label>SSID</label>
+      <input type="text" id="network-ssid" placeholder="choose from scan or type manually">
+      <label>PASSWORD</label>
+      <input type="password" id="network-password" placeholder="leave empty for open network">
+      <div class="network-actions">
+        <button class="cbtn" onclick="networkConnect()">CONNECT</button>
+      </div>
+      <div id="network-wifi-list"></div>
+    </div>
+    <div class="network-card">
+      <h3>HOTSPOT</h3>
+      <label>HOTSPOT NAME</label>
+      <input type="text" id="hotspot-ssid" placeholder="ii-hotspot">
+      <label>HOTSPOT PASSWORD</label>
+      <input type="text" id="hotspot-password" placeholder="minimum 8 chars">
+      <div class="network-actions">
+        <button class="cbtn" onclick="networkHotspotStart()">START HOTSPOT</button>
+        <button class="cbtn" onclick="networkHotspotStop()">STOP HOTSPOT</button>
+      </div>
+      <div class="network-note" id="hotspot-note"></div>
+    </div>
+    <div class="network-card">
+      <h3>ONE-TIME SETUP</h3>
+      <div class="network-note" id="network-setup-note"></div>
+      <div id="network-setup"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 //  SHARED STATE
@@ -659,6 +733,9 @@ const COLS=['#4488ff','#ff4466','#44ff88','#ffaa22','#cc44ff','#22ccff','#ffcc22
 //  TAB SWITCHER
 // ══════════════════════════════════════════════════════════════
 let activeTab='map';
+let networkPollTimer=null;
+let networkPollActive=false;
+let networkState=null;
 function switchTab(t){
   if(activeTab==='map'&&t!=='map'){
     // leaving MAP tab → always restore projection to live visuals
@@ -669,13 +746,15 @@ function switchTab(t){
     _updateMapBtn();
   }
   activeTab=t;
-  ['map','zones','ctrl','camera','media','outputs','help','term'].forEach(n=>{
+  ['map','zones','ctrl','camera','media','outputs','network','help','term'].forEach(n=>{
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('btn-'+n).classList.toggle('active',t===n);
   });
   if(t==='map'){resize();_enterMapTab();}
   if(t==='ctrl'){startCtrlPoll();}
   else{stopCtrlPoll();}
+  if(t==='network'){networkEnter();}
+  else{networkStopPoll();}
   if(t==='zones'){fetchMedia().then(()=>zonesInit());}
   if(t==='camera'){cameraInit();}
   if(t==='media'){mediaLoad();mediaStatusPoll();}
@@ -1180,6 +1259,137 @@ function setFxPreset(name){
   };
   const patch=presets[name];
   if(patch)ctrlPatch(patch);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NETWORK TAB
+// ══════════════════════════════════════════════════════════════
+function networkEnter(){
+  networkLoad(true);
+  networkStartPoll();
+}
+
+function networkStartPoll(){
+  if(networkPollActive)return;
+  networkPollActive=true;
+  networkPollLoop();
+}
+
+function networkStopPoll(){
+  networkPollActive=false;
+  if(networkPollTimer){
+    clearTimeout(networkPollTimer);
+    networkPollTimer=null;
+  }
+}
+
+async function networkPollLoop(){
+  if(!networkPollActive)return;
+  await networkLoad(false);
+  networkPollTimer=setTimeout(networkPollLoop,5000);
+}
+
+async function networkLoad(scan){
+  try{
+    const r=await fetch(scan?'/api/network?scan=1':'/api/network');
+    const data=await r.json();
+    if(networkState&&networkState.networks&&(!data.networks||!data.networks.length))data.networks=networkState.networks;
+    networkState=data;
+    renderNetwork(data);
+  }catch(e){
+    const badge=document.getElementById('network-status-badge');
+    badge.textContent='offline';
+    badge.className='warn';
+  }
+}
+
+async function networkAction(action,payload={}){
+  const badge=document.getElementById('network-status-badge');
+  badge.textContent='working…';
+  badge.className='';
+  try{
+    const r=await fetch('/api/network',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});
+    const data=await r.json();
+    if(networkState&&networkState.networks&&(!data.networks||!data.networks.length))data.networks=networkState.networks;
+    networkState=data;
+    renderNetwork(data);
+  }catch(e){
+    badge.textContent='error';
+    badge.className='warn';
+  }
+}
+
+function networkConnect(){
+  const ssid=(document.getElementById('network-ssid').value||'').trim();
+  const password=document.getElementById('network-password').value||'';
+  networkAction('connect',{ssid,password});
+}
+
+function networkHotspotStart(){
+  const ssid=(document.getElementById('hotspot-ssid').value||'').trim();
+  const password=(document.getElementById('hotspot-password').value||'').trim();
+  networkAction('hotspot_start',{ssid,password});
+}
+
+function networkHotspotStop(){
+  networkAction('hotspot_stop');
+}
+
+function chooseNetworkSsid(ssid){
+  document.getElementById('network-ssid').value=ssid||'';
+}
+
+function renderNetwork(data){
+  const badge=document.getElementById('network-status-badge');
+  badge.textContent=data.hotspot_active?'hotspot':(data.control_ready?'ready':(data.requires_setup?'setup needed':'status only'));
+  badge.className=data.control_ready||data.hotspot_active?'ok':'warn';
+
+  const ips=(data.ip_addrs||[])
+    .filter(row=>row.addrs&&row.addrs.length)
+    .map(row=>`${row.iface}: ${row.addrs.join(' ')}`)
+    .join('\n')||'No IP addresses detected.';
+  const lines=[
+    `<span class="muted">HOST</span> ${data.hostname||'—'}`,
+    `<span class="muted">WIFI</span> ${(data.wifi_iface||'none')} · ${(data.wifi_state||'unknown')}`,
+    `<span class="muted">LINK</span> ${(data.wifi_connection||'—')}${data.wifi_mode?` · ${data.wifi_mode}`:''}`,
+    `<span class="muted">IPS</span><br>${ips.replace(/\n/g,'<br>')}`,
+  ];
+  document.getElementById('network-summary').innerHTML=lines.join('<br>');
+  document.getElementById('network-note').textContent=data.msg||'';
+  document.getElementById('network-setup-note').textContent=data.requires_setup
+    ? 'Run these commands once on the Debian box so the web panel can take over Wi-Fi and hotspot control.'
+    : 'NetworkManager already manages Wi-Fi. This panel can scan, join networks, and toggle hotspot mode when policy allows.';
+  document.getElementById('network-setup').textContent=(data.setup_commands||[]).join('\n');
+
+  const hsDefaults=data.hotspot_defaults||{};
+  syncTextInput('hotspot-ssid',hsDefaults.ssid||'ii-hotspot');
+  syncTextInput('hotspot-password',hsDefaults.password||'iiiiiiii');
+  document.getElementById('hotspot-note').textContent=data.hotspot_active
+    ? `Hotspot is active on ${data.wifi_iface||'wifi'}.`
+    : (data.hotspot_ready ? 'Hotspot control is available.' : 'Hotspot start may require local policy/root permission.');
+
+  const list=document.getElementById('network-wifi-list');
+  const networks=data.networks||[];
+  if(!networks.length){
+    list.innerHTML=`<div class="network-empty">${data.scan_ready?'No scan results yet. Press SCAN WIFI.':'Scan unavailable until Wi-Fi is managed by NetworkManager.'}</div>`;
+  }else{
+    list.innerHTML=networks.map(net=>`
+      <div class="network-wifi-row ${net.in_use?'active':''}">
+        <div class="network-wifi-main">
+          <div class="network-wifi-ssid">${net.hidden?'[ hidden network ]':escapeHtml(net.ssid||'')}</div>
+          <div class="network-wifi-sub">${net.signal}% · ${escapeHtml(net.security||'open')} · ch ${escapeHtml(net.chan||'?')}</div>
+        </div>
+        <span class="network-pill">${net.in_use?'LIVE':'READY'}</span>
+        <button class="cbtn" style="width:auto;margin-top:0;padding:4px 10px" onclick="chooseNetworkSsid(${JSON.stringify(net.ssid||'')})">USE</button>
+      </div>
+    `).join('');
+  }
+}
+
+function escapeHtml(text){
+  return String(text??'').replace(/[&<>\"']/g,(ch)=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
 }
 
 // ── polling ───────────────────────────────────────────────────
@@ -2582,6 +2792,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(load_json(STATUS_PATH, {}))
         elif p.path == '/api/ctrl':
             self._json(load_json(CTRL_PATH, {}))
+        elif p.path == '/api/network':
+            self._json(network_status(include_scan=bool(qs.get('scan'))))
         elif p.path == '/api/media':
             os.makedirs(MEDIA_DIR, exist_ok=True)
             files = []
@@ -2648,6 +2860,8 @@ class Handler(BaseHTTPRequestHandler):
             existing.update(body)
             save_json_atomic(CTRL_PATH, existing)
             self._json({'ok': True})
+        elif p.path == '/api/network':
+            self._json(network_action(body))
         elif p.path == '/api/upload':
             os.makedirs(MEDIA_DIR, exist_ok=True)
             msg = BytesParser(policy=email_default).parsebytes(
